@@ -3,12 +3,13 @@
 import React from 'react';
 import { loginStyles } from './LoginPage.styles';
 import { useLogin } from './useLogin';
+import PageTransition from '../components/PageTransition';
 
 export default function LoginPage() {
   const { loading, handleLogin } = useLogin();
 
   return (
-    <>
+    <PageTransition direction="up">
       <style jsx>{loginStyles}</style>
       
       <main className="login-root">
@@ -53,6 +54,6 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
-    </>
+    </PageTransition>
   );
 }

@@ -3,6 +3,7 @@
 import React from 'react';
 import { twoFAStyles } from './TwoFAPage.styles';
 import { use2FA } from './use2FA';
+import PageTransition from '../../components/PageTransition';
 
 export default function TwoFAPage() {
   const { code, handleInputChange, handleSubmit } = use2FA();
@@ -10,11 +11,11 @@ export default function TwoFAPage() {
   // El valor que quieres que tenga el QR
   const secretValue = "otpauth://totp/MiApp:benj.moralesb@duocuc.cl?secret=JBSWY3DPEHPK3PXP&issuer=MiApp";
   
-  // Generamos la URL del QR usando un servicio gratuito y confiable (QuickChart)
+  // Generamos la URL del QR usando QuickChart
   const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(secretValue)}&size=160&margin=0`;
 
   return (
-    <>
+    <PageTransition direction="left">
       <style jsx>{twoFAStyles}</style>
       
       <main className="tfa-root">
@@ -26,7 +27,6 @@ export default function TwoFAPage() {
           
           <div className="qr-container">
             <div className="qr-wrapper">
-              {/* Usamos una imagen normal para evitar errores de TypeScript */}
               <img 
                 src={qrImageUrl} 
                 alt="Código QR de Seguridad"
@@ -59,6 +59,6 @@ export default function TwoFAPage() {
           </form>
         </div>
       </main>
-    </>
+    </PageTransition>
   );
 }
