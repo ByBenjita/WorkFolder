@@ -1,101 +1,88 @@
 import css from 'styled-jsx/css';
 
 export const twoFAStyles = css`
-  /* ── Root con Imagen Formal ── */
   .tfa-root {
     min-height: 100vh;
-    /* Mismo fondo que el login para coherencia visual */
     background-image: 
-      linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+      linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
       url('/background.png');
-    
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
-    
     display: flex;
     align-items: center;
     justify-content: center;
-    position: relative;
-    overflow: hidden;
     font-family: "Segoe UI", system-ui, sans-serif;
   }
 
-  /* ── Grid background ── */
-  .grid-bg {
-    position: absolute;
-    inset: 0;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-  }
-
-  /* ── Card Transparente (Glassmorphism) ── */
+  /* Card Ultra Compacta */
   .tfa-card {
     position: relative;
     z-index: 10;
     width: 100%;
-    max-width: 450px;
-    margin: 0 24px;
-    padding: 48px;
-    
-    /* Fondo translúcido y desenfoque */
-    background-color: rgba(23, 23, 23, 0.45);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+    max-width: 340px;
+    padding: 24px 20px;
+    background-color: #121212; 
+    border: 1px solid #222;
+    border-radius: 40px; 
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
     text-align: center;
   }
 
   .tfa-title {
     color: #ffffff;
-    font-size: 28px;
-    font-weight: 800;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
+    font-size: 19px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
 
-  .tfa-subtitle {
-    color: rgba(255, 255, 255, 0.6);
-    font-size: 15px;
-    margin-bottom: 32px;
-    line-height: 1.5;
+  .tfa-description {
+    color: #5d6d7e;
+    font-size: 11px;
+    line-height: 1.3;
+    margin-bottom: 16px;
   }
 
-  /* ── QR Container ── */
+  .tfa-step {
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    display: block;
+  }
+
   .qr-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 32px;
+    margin-bottom: 16px;
   }
 
   .qr-wrapper {
-    background: white;
-    padding: 12px;
-    border-radius: 16px;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    background: #ffffff;
+    padding: 8px;
+    border-radius: 6px;
   }
 
-  /* ── OTP Inputs ── */
+  /* Recuadros de código con Glow RGB */
   .tfa-input-group {
     display: flex;
-    gap: 12px;
+    gap: 4px;
     justify-content: center;
-    margin-bottom: 32px;
+    align-items: center;
+    margin-bottom: 20px;
   }
 
   .tfa-input {
-    width: 45px;
-    height: 55px;
+    width: 32px;
+    height: 42px;
     background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(59, 158, 255, 0.3);
-    border-radius: 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
     text-align: center;
-    font-size: 24px;
+    font-size: 16px;
     font-weight: 700;
     color: #ffffff;
     outline: none;
@@ -103,32 +90,52 @@ export const twoFAStyles = css`
   }
 
   .tfa-input:focus {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: #1e90ff;
-    box-shadow: 0 0 0 4px rgba(30, 144, 255, 0.15);
+    border-color: #3b82f6;
+    background-color: rgba(59, 158, 255, 0.1);
+    /* Glow Azul */
+    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 
+                0 0 15px rgba(59, 130, 246, 0.4);
+    transform: translateY(-1px);
   }
 
-  /* ── Button ── */
+  .tfa-separator {
+    color: #3b82f6;
+    font-size: 16px;
+    font-weight: bold;
+  }
+
+  /* Botón con resaltado Glow al pasar el mouse */
   .tfa-button {
     width: 100%;
-    background-color: #1e90ff;
-    color: #ffffff;
-    font-weight: 700;
-    padding: 16px;
-    border-radius: 12px;
+    background-color: #4f8cf6;
+    color: #000000;
+    font-weight: 800;
+    font-size: 13px;
+    padding: 12px;
+    border-radius: 8px;
     border: none;
     cursor: pointer;
-    transition: all 0.2s ease;
-    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    transition: all 0.3s ease;
   }
 
   .tfa-button:hover {
-    background-color: #1478e0;
-    transform: translateY(-1px);
-    box-shadow: 0 6px 15px rgba(30, 144, 255, 0.4);
+    background-color: #60a5fa;
+    transform: translateY(-2px);
+    /* Glow del Botón */
+    box-shadow: 0 0 15px rgba(79, 140, 246, 0.6), 
+                0 0 30px rgba(79, 140, 246, 0.3);
   }
 
   .tfa-button:active {
     transform: translateY(0);
+    box-shadow: 0 0 5px rgba(79, 140, 246, 0.8);
+  }
+
+  .tfa-footer {
+    color: #3e4a59;
+    font-size: 11px;
+    font-weight: 600;
   }
 `;

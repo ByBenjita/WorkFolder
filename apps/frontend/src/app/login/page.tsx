@@ -17,8 +17,8 @@ export default function LoginPage() {
         
         <div className="login-card">
           <div className="card-content">
-            <h1 className="login-title">Bienvenido</h1>
-            <p className="login-subtitle">Ingresa tus credenciales para continuar</p>
+            <h1 className="login-title">WorkFolder</h1>
+            <p className="login-subtitle">Bóveda Digital Corporativa</p>
             
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
               <div className="input-group">
