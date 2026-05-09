@@ -3,12 +3,13 @@
 import React from 'react';
 import { loginStyles } from './LoginPage.styles';
 import { useLogin } from './useLogin';
+import PageTransition from '../components/PageTransition';
 
 export default function LoginPage() {
   const { loading, handleLogin } = useLogin();
 
   return (
-    <>
+    <PageTransition direction="up">
       <style jsx>{loginStyles}</style>
       
       <main className="login-root">
@@ -16,8 +17,8 @@ export default function LoginPage() {
         
         <div className="login-card">
           <div className="card-content">
-            <h1 className="login-title">Bienvenido</h1>
-            <p className="login-subtitle">Ingresa tus credenciales para continuar</p>
+            <h1 className="login-title">WorkFolder</h1>
+            <p className="login-subtitle">Bóveda Digital Corporativa</p>
             
             <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
               <div className="input-group">
@@ -53,6 +54,6 @@ export default function LoginPage() {
           </div>
         </div>
       </main>
-    </>
+    </PageTransition>
   );
 }

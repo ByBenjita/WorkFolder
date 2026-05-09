@@ -1,10 +1,18 @@
 import css from 'styled-jsx/css';
 
 export const loginStyles = css`
-  /* ── Root ── */
+  /* ── Root con Imagen Formal y Filtro ── */
   .login-root {
     min-height: 100vh;
-    background-color: #0d0d0d;
+    /* Oscurecemos un poco más el fondo (0.8) para que el texto resalte mejor */
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
+      url('/background.png');
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -13,17 +21,17 @@ export const loginStyles = css`
     font-family: "Segoe UI", system-ui, sans-serif;
   }
 
-  /* ── Grid background ── */
+  /* ── Grid background (Casi invisible, da textura) ── */
   .grid-bg {
     position: absolute;
     inset: 0;
-    background-image: linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
     background-size: 40px 40px;
     pointer-events: none;
   }
 
-  /* ── Card ── */
+  /* ── Card Transparente (Glassmorphism) ── */
   .login-card {
     position: relative;
     z-index: 10;
@@ -33,11 +41,21 @@ export const loginStyles = css`
   }
 
   .card-content {
-    background-color: #171717;
-    border: 1px solid #2a2a2a;
+    /* Fondo translúcido */
+    background-color: rgba(23, 23, 23, 0.45); 
+    
+    /* El efecto de desenfoque de cristal */
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    
+    /* Borde fino y brillante como el cristal */
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    
     border-radius: 24px;
     padding: 48px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    
+    /* Sombra profunda para dar relieve */
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
   .login-title {
@@ -46,43 +64,54 @@ export const loginStyles = css`
     font-weight: 800;
     margin-bottom: 8px;
     text-align: center;
+    letter-spacing: -0.5px;
   }
 
   .login-subtitle {
-    color: #a1a1aa;
+    color: rgba(255, 255, 255, 0.6); /* Blanco traslúcido */
     text-align: center;
     margin-bottom: 40px;
+    font-size: 15px;
   }
 
-  /* ── Inputs ── */
+  /* ── Inputs Modernos y Semi-traslúcidos ── */
   .input-group {
     margin-bottom: 24px;
   }
 
   .input-label {
     display: block;
-    color: #a1a1aa;
-    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
+    font-weight: 600;
     margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 
   .login-input {
     width: 100%;
-    background-color: #222222;
-    border: 1px solid #3b9eff;
+    /* Input integrado con el efecto de la card */
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(59, 158, 255, 0.3);
     border-radius: 12px;
     padding: 14px 16px;
     color: #ffffff;
     outline: none;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
   }
 
   .login-input:focus {
-    background-color: #2a2a2a;
-    box-shadow: 0 0 0 2px rgba(59, 158, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.07);
+    border-color: #1e90ff;
+    box-shadow: 0 0 0 4px rgba(30, 144, 255, 0.15);
   }
 
-  /* ── Button ── */
+  .login-input::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* ── Button de Acción ── */
   .login-button {
     width: 100%;
     background-color: #1e90ff;
@@ -93,19 +122,39 @@ export const loginStyles = css`
     border: none;
     cursor: pointer;
     margin-top: 8px;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
   }
 
   .login-button:hover {
     background-color: #1478e0;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(30, 144, 255, 0.4);
   }
 
+  .login-button:active {
+    transform: translateY(0);
+  }
+
+  .login-button:disabled {
+    background-color: #333;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* ── Links ── */
   .forgot-link {
     display: block;
     text-align: center;
-    color: #a1a1aa;
+    color: rgba(255, 255, 255, 0.4);
     font-size: 14px;
     margin-top: 24px;
     text-decoration: none;
+    transition: color 0.2s;
+  }
+
+  .forgot-link:hover {
+    color: #ffffff;
+    text-decoration: underline;
   }
 `;
