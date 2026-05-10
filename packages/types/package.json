@@ -1,8 +1,0 @@
-{
-  "name": "@workfolder/types",
-  "version": "1.0.0",
-  "description": "Interfaces compartidas para WorkFolder",
-  "main": "index.ts",
-  "types": "index.ts",
-  "license": "ISC"
-}

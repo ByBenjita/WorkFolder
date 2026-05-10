@@ -1,16 +1,16 @@
 {
   "name": "workfolder",
   "private": true,
+  "packageManager": "pnpm@11.0.9",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev:frontend": "npm run dev --workspace=apps/frontend",
-    "dev:backend": "npm run dev --workspace=apps/backend",
-    "dev": "npx concurrently \"npm run dev:frontend\" \"npm run dev:backend\""
+    "dev": "turbo dev",
+    "build": "turbo build"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "turbo": "2.9.11"
   }
 }
