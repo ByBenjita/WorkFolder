@@ -3,6 +3,7 @@ import crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 
+// Función para encriptar un buffer usando AES-256-GCM
 export const encryptBuffer = (buffer: Buffer, keyString: string): Buffer => {
   const key = crypto.createHash('sha256').update(String(keyString)).digest('base64').substring(0, 32);
   const iv = crypto.randomBytes(IV_LENGTH);
@@ -14,6 +15,7 @@ export const encryptBuffer = (buffer: Buffer, keyString: string): Buffer => {
   return Buffer.concat([iv, authTag, encrypted]);
 };
 
+// Función para desencriptar un buffer usando AES-256-GCM
 export const decryptBuffer = (buffer: Buffer, keyString: string): Buffer => {
   const key = crypto.createHash('sha256').update(String(keyString)).digest('base64').substring(0, 32);
   
