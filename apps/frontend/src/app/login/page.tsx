@@ -6,7 +6,8 @@ import { useLogin } from './useLogin';
 import PageTransition from '../components/PageTransition';
 
 export default function LoginPage() {
-  const { loading, handleLogin } = useLogin();
+  // Extraemos las nuevas funciones del hook
+  const { loading, email, setEmail, password, setPassword, handleLogin } = useLogin();
 
   return (
     <PageTransition direction="up">
@@ -27,6 +28,8 @@ export default function LoginPage() {
                   type="email" 
                   className="login-input" 
                   placeholder="ejemplo@correo.com" 
+                  value={email} // <-- Conectado
+                  onChange={(e) => setEmail(e.target.value)} // <-- Conectado
                   required 
                 />
               </div>
@@ -37,6 +40,8 @@ export default function LoginPage() {
                   type="password" 
                   className="login-input" 
                   placeholder="••••••••" 
+                  value={password} // <-- Conectado
+                  onChange={(e) => setPassword(e.target.value)} // <-- Conectado
                   required 
                 />
               </div>

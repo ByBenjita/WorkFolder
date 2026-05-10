@@ -1,28 +1,46 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation'; 
+import { supabase } from '../../services/supabase'; // Importamos el cliente de Supabase
 
-// Hook personalizado para manejar la lógica de login
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const router = useRouter();
 
   const handleLogin = async () => {
     setLoading(true);
     try {
-      // Simulación de llamada a API
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      console.log("Login intentado");
+      // Llamada real a la autenticación de Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      // Manejo de errores de autenticación
+      if (error) {
+        alert("Credenciales incorrectas: " + error.message);
+        return;
+      }
+
+      console.log("Login exitoso", data);
+      // Si todo sale bien, mandamos al 2FA o al Home
       router.push('/login/2fa'); 
-    } catch (error) {
       
-      console.error("Error en el login", error);
+    } catch (error) {
+      console.error("Error inesperado", error);
     } finally {
       setLoading(false);
     }
   };
 
+  // Retornamos el estado y la función de login para que el componente pueda usarlos
   return {
     loading,
+    email,
+    setEmail,
+    password,
+    setPassword,
     handleLogin
   };
 };
