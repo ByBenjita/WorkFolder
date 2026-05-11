@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
+// Nombre del bucket en Supabase Storagedonde se guardarán los archivos cifrados
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!;
 const BUCKET_NAME = 'documentos_cifrados';
 
