@@ -4,8 +4,8 @@ import { useRouter } from 'next/navigation';
 
 export const use2FA = () => {
   const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [qrCodeData, setQrCodeData] = useState<string>(''); 
-  const [factorId, setFactorId] = useState<string>('');    
+  const [qrCodeData, setQrCodeData] = useState<string>('');
+  const [factorId, setFactorId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -19,38 +19,38 @@ export const use2FA = () => {
           return;
         }
 
-        // --- PASO NUEVO: LIMPIEZA PARA EVITAR ERROR AL RECARGAR ---
-        // 1. Listamos los factores actuales del usuario
+        // Verificar si ya tiene un factor verificado → no debería estar aquí
         const { data: listData } = await supabase.auth.mfa.listFactors();
-        
-        // 2. Buscamos si hay un factor 'unverified' (pendiente de la carga anterior)
-        const pendingFactor = listData?.all.find(
+        const alreadyVerified = listData?.all?.find(
+          (f) => f.factor_type === 'totp' && f.status === 'verified'
+        );
+        if (alreadyVerified) {
+          router.push('/login/2fa/verify');
+          return;
+        }
+
+        // Limpiar factores sin verificar previos
+        const pendingFactor = listData?.all?.find(
           (f) => f.factor_type === 'totp' && f.status === 'unverified'
         );
-
-        // 3. Si existe, lo borramos para que no choque con el nuevo enrolamiento
         if (pendingFactor) {
           await supabase.auth.mfa.unenroll({ factorId: pendingFactor.id });
         }
 
-        // --- AHORA SÍ GENERAMOS EL NUEVO QR ---
+        // Enrolar nuevo factor
         const { data, error } = await supabase.auth.mfa.enroll({
           factorType: 'totp',
           issuer: 'WorkFolder',
-          friendlyName: 'Mi Dispositivo Seguro'
+          friendlyName: 'Mi Dispositivo Seguro',
         });
 
         if (error) {
-          // Si ya está verificado, lo mandamos al dashboard
-          if (error.message.includes("already enrolled")) {
-            router.push('/dashboard');
-          }
           console.error("Error en enroll:", error.message);
           return;
         }
 
         setFactorId(data.id);
-        setQrCodeData(data.totp.qr_code); 
+        setQrCodeData(data.totp.qr_code);
       } catch (err) {
         console.error("Error inesperado:", err);
       } finally {
@@ -76,7 +76,7 @@ export const use2FA = () => {
   const handleSubmit = async () => {
     if (!factorId) return;
 
-    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+    const { error } = await supabase.auth.mfa.challengeAndVerify({
       factorId,
       code: code.join(''),
     });
@@ -85,7 +85,7 @@ export const use2FA = () => {
       alert("Código incorrecto o expirado. Intenta con el nuevo código de tu App.");
       setCode(['', '', '', '', '', '']);
     } else {
-      router.push('/dashboard');
+      router.push('/admin/enterprise-panel');
     }
   };
 

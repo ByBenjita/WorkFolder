@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; 
-import { supabase } from '../../services/supabase'; // Importamos el cliente de Supabase
+import { useRouter } from 'next/navigation';
+import { supabase } from '../../services/supabase';
 
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
@@ -11,24 +11,32 @@ export const useLogin = () => {
   const handleLogin = async () => {
     setLoading(true);
     try {
-      // Llamada real a la autenticación de Supabase
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      // Manejo de errores de autenticación
       if (error) {
         alert("Credenciales incorrectas: " + error.message);
         return;
       }
-      // Refrescamos la sesión para asegurar que los permisos de MFA se carguen correctamente antes de redirigir  
+
       await supabase.auth.refreshSession();
 
-      console.log("Login exitoso", data);
-      // Si todo sale bien, mandamos al 2FA o al Home
-      router.push('/login/2fa'); 
-      
+      // Verificamos si el usuario ya tiene 2FA configurado y verificado
+      const { data: mfaData } = await supabase.auth.mfa.listFactors();
+      const verifiedFactor = mfaData?.all?.find(
+        (f) => f.factor_type === 'totp' && f.status === 'verified'
+      );
+
+      if (verifiedFactor) {
+        // Ya tiene 2FA → mandamos a VERIFICAR (solo los 6 dígitos)
+        router.push('/login/2fa/verify');
+      } else {
+        // No tiene 2FA → mandamos a CONFIGURAR
+        router.push('/login/2fa');
+      }
+
     } catch (error) {
       console.error("Error inesperado", error);
     } finally {
@@ -36,7 +44,6 @@ export const useLogin = () => {
     }
   };
 
-  // Retornamos el estado y la función de login para que el componente pueda usarlos
   return {
     loading,
     email,
