@@ -6,9 +6,8 @@ import { use2FA } from './use2FA';
 import PageTransition from '../../components/PageTransition';
 
 export default function TwoFAPage() {
-  const { code, handleInputChange, handleSubmit } = use2FA();
-  const secretValue = "otpauth://totp/WorkFolder:benj.moralesb@duocuc.cl?secret=JBSWY3DPEHPK3PXP&issuer=WorkFolder";
-  const qrImageUrl = `https://quickchart.io/qr?text=${encodeURIComponent(secretValue)}&size=100&margin=0`;
+  // Obtenemos qrCodeData directamente del hook
+  const { code, qrCodeData, handleInputChange, handleSubmit, loading } = use2FA();
 
   return (
     <PageTransition direction="left">
@@ -19,7 +18,7 @@ export default function TwoFAPage() {
           <h1 className="tfa-title">🔐 Configuración de Seguridad</h1>
           
           <p className="tfa-description">
-            Para proteger los archivos de la empresa, debes habilitar la Autenticación de Dos Pasos(2FA) antes de continuar.
+            Para proteger los archivos de la empresa, debes habilitar la Autenticación de Dos Pasos (2FA) antes de continuar.
           </p>
 
           <span className="tfa-step">
@@ -29,7 +28,26 @@ export default function TwoFAPage() {
           
           <div className="qr-container">
             <div className="qr-wrapper">
-              <img src={qrImageUrl} alt="QR CODE" width={100} height={100} style={{ display: 'block' }} />
+              {/* CAMBIO CLAVE: Usamos qrCodeData directamente si existe */}
+              {qrCodeData ? (
+                <img 
+                  src={qrCodeData} 
+                  alt="QR MFA" 
+                  width={150} 
+                  height={150} 
+                  style={{ 
+                    display: 'block', 
+                    margin: '0 auto',
+                    backgroundColor: 'white', // Fondo blanco para que el lector lo reconozca bien
+                    padding: '8px',
+                    borderRadius: '4px'
+                  }} 
+                />
+              ) : (
+                <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontSize: '10px', textAlign: 'center' }}>
+                  {loading ? "Generando QR..." : "Error al cargar el código"}
+                </div>
+              )}
             </div>
           </div>
 
@@ -37,34 +55,26 @@ export default function TwoFAPage() {
 
           <form onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleSubmit(); }}>
             <div className="tfa-input-group">
-              {code.slice(0, 3).map((digit, index) => (
-                <input
-                  key={index}
-                  id={`otp-${index}`}
-                  type="text"
-                  maxLength={1}
-                  className="tfa-input"
-                  value={digit}
-                  onChange={(e) => handleInputChange(e.target.value, index)}
-                  required
-                />
-              ))}
-              <span className="tfa-separator">-</span>
-              {code.slice(3, 6).map((digit, index) => (
-                <input
-                  key={index + 3}
-                  id={`otp-${index + 3}`}
-                  type="text"
-                  maxLength={1}
-                  className="tfa-input"
-                  value={digit}
-                  onChange={(e) => handleInputChange(e.target.value, index + 3)}
-                  required
-                />
+              {code.map((digit, index) => (
+                <React.Fragment key={index}>
+                  <input
+                    id={`otp-${index}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    className="tfa-input"
+                    value={digit}
+                    onChange={(e) => handleInputChange(e.target.value, index)}
+                    required
+                  />
+                  {index === 2 && <span className="tfa-separator">-</span>}
+                </React.Fragment>
               ))}
             </div>
 
-            <button type="submit" className="tfa-button">Verificar y Activar</button>
+            <button type="submit" className="tfa-button" disabled={loading}>
+              {loading ? "Verificando..." : "Verificar y Activar"}
+            </button>
           </form>
 
           <p className="tfa-footer">WorkFolder Secure Vault</p>

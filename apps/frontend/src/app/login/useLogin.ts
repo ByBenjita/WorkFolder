@@ -22,6 +22,8 @@ export const useLogin = () => {
         alert("Credenciales incorrectas: " + error.message);
         return;
       }
+      // Refrescamos la sesión para asegurar que los permisos de MFA se carguen correctamente antes de redirigir  
+      await supabase.auth.refreshSession();
 
       console.log("Login exitoso", data);
       // Si todo sale bien, mandamos al 2FA o al Home
