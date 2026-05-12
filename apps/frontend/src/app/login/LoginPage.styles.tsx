@@ -1,18 +1,14 @@
 import css from 'styled-jsx/css';
 
 export const loginStyles = css`
-  /* ── Root con Imagen Formal y Filtro ── */
   .login-root {
     min-height: 100vh;
-    /* Oscurecemos un poco más el fondo (0.8) para que el texto resalte mejor */
     background-image: 
       linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
       url('/background.png');
-    
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
-    
     display: flex;
     align-items: center;
     justify-content: center;
@@ -21,7 +17,6 @@ export const loginStyles = css`
     font-family: "Segoe UI", system-ui, sans-serif;
   }
 
-  /* ── Grid background (Casi invisible, da textura) ── */
   .grid-bg {
     position: absolute;
     inset: 0;
@@ -31,7 +26,6 @@ export const loginStyles = css`
     pointer-events: none;
   }
 
-  /* ── Card Transparente (Glassmorphism) ── */
   .login-card {
     position: relative;
     z-index: 10;
@@ -41,20 +35,12 @@ export const loginStyles = css`
   }
 
   .card-content {
-    /* Fondo translúcido */
     background-color: rgba(23, 23, 23, 0.45); 
-    
-    /* El efecto de desenfoque de cristal */
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    
-    /* Borde fino y brillante como el cristal */
     border: 1px solid rgba(255, 255, 255, 0.08);
-    
     border-radius: 24px;
     padding: 48px;
-    
-    /* Sombra profunda para dar relieve */
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
@@ -68,13 +54,12 @@ export const loginStyles = css`
   }
 
   .login-subtitle {
-    color: rgba(255, 255, 255, 0.6); /* Blanco traslúcido */
+    color: rgba(255, 255, 255, 0.6);
     text-align: center;
     margin-bottom: 40px;
     font-size: 15px;
   }
 
-  /* ── Inputs Modernos y Semi-traslúcidos ── */
   .input-group {
     margin-bottom: 24px;
   }
@@ -91,7 +76,7 @@ export const loginStyles = css`
 
   .login-input {
     width: 100%;
-    /* Input integrado con el efecto de la card */
+    box-sizing: border-box;
     background-color: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(59, 158, 255, 0.3);
     border-radius: 12px;
@@ -109,6 +94,38 @@ export const loginStyles = css`
 
   .login-input::placeholder {
     color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* ── Password wrapper ── */
+  .password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+  }
+
+  .password-input {
+    padding-right: 48px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: color 0.2s ease;
+  }
+
+  .password-toggle:hover {
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* ── Button de Acción ── */
@@ -142,7 +159,6 @@ export const loginStyles = css`
     box-shadow: none;
   }
 
-  /* ── Links ── */
   .forgot-link {
     display: block;
     text-align: center;
