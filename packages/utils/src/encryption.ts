@@ -1,4 +1,6 @@
 import crypto from 'crypto';
+// @ts-ignore
+import type {} from 'node';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;

@@ -7,9 +7,22 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
-
+// Nombre del bucket en Supabase Storagedonde se guardarán los archivos cifrados
 const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY!;
 const BUCKET_NAME = 'documentos_cifrados';
+
+// -------------------------------------------------------------------------
+// Sanitizar nombre de archivo para uso seguro en Storage
+// -------------------------------------------------------------------------
+function sanitizeFilename(filename: string): string {
+  return filename
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")     // Elimina tildes y acentos
+    .replace(/[^a-zA-Z0-9._-]/g, "_")   // Espacios y especiales → _
+    .replace(/_+/g, "_")                 // Múltiples _ → uno solo
+    .replace(/^_|_$/g, "");             // Elimina _ al inicio/final
+}
 
 // -------------------------------------------------------------------------
 // POST: Recibir archivo -> Cifrar -> Subir a Storage -> Guardar Metadata
@@ -28,8 +41,9 @@ export async function POST(req: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const encryptedBuffer = encryptBuffer(Buffer.from(arrayBuffer), ENCRYPTION_KEY);
 
-    // Definir ruta en Storage (S3 Supabase)
-    const storagePath = `${userId}/${Date.now()}_${file.name}.enc`;
+    // Sanitizar nombre para la ruta en Storage, conservar original para metadata
+    const safeName = sanitizeFilename(file.name);
+    const storagePath = `${userId}/${Date.now()}_${safeName}.enc`;
 
     // 1. Subir al Storage
     const { error: storageError } = await supabase.storage
@@ -39,6 +53,7 @@ export async function POST(req: Request) {
     if (storageError) throw storageError;
 
     // 2. Guardar metadata en PostgreSQL
+    // nombre_original conserva el nombre con espacios para mostrarlo al usuario
     const { data, error: dbError } = await supabase
       .from('documentos_metadata')
       .insert({
@@ -89,7 +104,7 @@ export async function GET(req: Request) {
     const encryptedBuffer = Buffer.from(await fileData.arrayBuffer());
     const decryptedBuffer = decryptBuffer(encryptedBuffer, ENCRYPTION_KEY);
 
-    // 4. Retornar archivo al navegador
+    // 4. Retornar archivo al navegador con nombre original (con espacios)
     return new NextResponse(decryptedBuffer as any, {
       headers: {
         'Content-Type': meta.tipo_mime,
