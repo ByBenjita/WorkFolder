@@ -2,42 +2,41 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/services/supabase';
+import { authApi, getAccessToken } from '@/services/authApi';
 import EnterpriseSidebar from './components/EnterpriseSidebar/EnterpriseSidebar';
-import EnterprisePanel from './components/EnterprisePanel/EnterprisePanel';
-
-export type AdminSection =
-  | 'home'
-  | 'usuarios'
-  | 'rrhh'
-  | 'boveda'
-  | 'seguridad'
-  | 'auditoria'
-  | 'facturacion';
+import EnterprisePanel   from './components/EnterprisePanel/EnterprisePanel';
+import type { AdminSection } from './types';
 
 export default function EnterprisePanelPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>('home');
-  const [userEmail, setUserEmail] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [userEmail, setUserEmail]         = useState('');
+  const [loading, setLoading]             = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/login');
-        return;
-      }
+      try {
+        // Si no hay token en sessionStorage → al login
+        const token = getAccessToken();
+        if (!token) {
+          router.push('/login');
+          return;
+        }
 
-      // Verificar nivel AAL2 (2FA completado)
-      const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-      if (aalData?.currentLevel !== 'aal2') {
-        router.push('/login');
-        return;
-      }
+        const data = await authApi.getSession();
 
-      setUserEmail(session.user.email ?? '');
-      setLoading(false);
+        if (!data.success) {
+          router.push('/login');
+          return;
+        }
+
+        // El token existe y la sesión es válida → permitir acceso
+        setUserEmail(data.user.email);
+        setLoading(false);
+
+      } catch (e) {
+        router.push('/login');
+      }
     };
 
     checkSession();
@@ -64,7 +63,8 @@ export default function EnterprisePanelPage() {
   return (
     <div style={{
       display: 'flex',
-      minHeight: '100vh',
+      height: '100vh',
+      overflow: 'hidden',
       backgroundColor: '#0f0f0f',
       fontFamily: '"Segoe UI", system-ui, sans-serif',
     }}>
