@@ -1,63 +1,67 @@
-import { useState } from 'react';
-import { supabase } from '@/services/supabase';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { authApi, setAccessToken } from '@/services/authApi';
 
 export const useVerify2FA = () => {
-  const [code, setCode] = useState(['', '', '', '', '', '']);
-  const [loading, setLoading] = useState(false);
+  const [code, setCode]           = useState(['', '', '', '', '', '']);
+  const [factorId, setFactorId]   = useState<string>('');
+  const [loading, setLoading]     = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    const getFactorId = async () => {
+      try {
+        const data = await authApi.getVerifiedFactor();
+        if (!data.success || !data.factor_id) {
+          router.push('/login');
+          return;
+        }
+        setFactorId(data.factor_id);
+      } catch {
+        router.push('/login');
+      }
+    };
+    getFactorId();
+  }, [router]);
 
   const handleInputChange = (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
     const newCode = [...code];
     newCode[index] = value.slice(-1);
     setCode(newCode);
-
     if (value && index < 5) {
-      const nextInput = document.getElementById(`otp-${index + 1}`);
-      nextInput?.focus();
+      document.getElementById(`otp-${index + 1}`)?.focus();
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     if (e.key === 'Backspace' && !code[index] && index > 0) {
-      const prevInput = document.getElementById(`otp-${index - 1}`);
-      prevInput?.focus();
+      document.getElementById(`otp-${index - 1}`)?.focus();
     }
   };
 
   const handleSubmit = async () => {
     const fullCode = code.join('');
-    if (fullCode.length !== 6) return;
+    if (fullCode.length !== 6 || !factorId) return;
 
     setLoading(true);
     try {
-      // Obtenemos el factor verificado del usuario
-      const { data: mfaData } = await supabase.auth.mfa.listFactors();
-      const verifiedFactor = mfaData?.all?.find(
-        (f) => f.factor_type === 'totp' && f.status === 'verified'
-      );
+      const data = await authApi.mfaVerify(factorId, fullCode);
 
-      if (!verifiedFactor) {
-        alert("No se encontró un factor 2FA configurado.");
-        router.push('/login/2fa');
+      if (!data.success) {
+        alert('Código incorrecto o expirado.');
+        setCode(['', '', '', '', '', '']);
+        document.getElementById('otp-0')?.focus();
         return;
       }
 
-      const { error } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: verifiedFactor.id,
-        code: fullCode,
-      });
-
-      if (error) {
-        alert("Código incorrecto o expirado. Intenta con el código actual de tu App.");
-        setCode(['', '', '', '', '', '']);
-        document.getElementById('otp-0')?.focus();
-      } else {
-        router.push('/admin/enterprise-panel');
+      // ── Guardar el nuevo token AAL2 ──────────────────────────
+      if (data.access_token) {
+        setAccessToken(data.access_token);
       }
-    } catch (err) {
-      console.error("Error inesperado:", err);
+
+      router.push('/admin/enterprise-panel');
+
     } finally {
       setLoading(false);
     }

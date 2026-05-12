@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/services/supabase';
+import { authApi } from '@/services/authApi';
 import type { AdminSection } from '../../types';
 
 export interface NavItem {
@@ -26,8 +26,13 @@ export const useSidebar = () => {
 
   const handleLogout = async () => {
     setLoggingOut(true);
-    await supabase.auth.signOut();
-    router.push('/login');
+    try {
+      await authApi.logout();
+    } catch (e) {
+      console.error('Error al cerrar sesión:', e);
+    } finally {
+      router.push('/login');
+    }
   };
 
   return { loggingOut, handleLogout };
