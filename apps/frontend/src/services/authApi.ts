@@ -1,4 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_USUARIOS_API_URL ?? 'http://localhost:3001';
+// ── El frontend llama a sus propias API routes (proxy interno) ───
+// Nunca llama directamente al microservicio de usuarios
+const BASE = '/api';
 
 // ── Interfaces ───────────────────────────────────────────────────
 export interface LoginResponse {
@@ -15,9 +17,9 @@ export interface MFAEnrollResponse {
 }
 
 export interface MFAVerifyResponse {
-  success: boolean;
-  message: string;
-  access_token?:  string;  
+  success:        boolean;
+  message:        string;
+  access_token?:  string;
   refresh_token?: string;
 }
 
@@ -32,35 +34,29 @@ export interface SessionResponse {
   aal:     { current: string; next: string; mfa_complete: boolean };
 }
 
-// ── Token — guardado en sessionStorage para sobrevivir navegación ─
+// ── Token en sessionStorage ──────────────────────────────────────
 const TOKEN_KEY = 'wf_access_token';
 
 export const setAccessToken = (token: string) => {
-  if (typeof window !== 'undefined') {
-    sessionStorage.setItem(TOKEN_KEY, token);
-  }
+  if (typeof window !== 'undefined') sessionStorage.setItem(TOKEN_KEY, token);
 };
 
-// ── Obtener token para incluir en headers de fetch ───────────────
 export const getAccessToken = (): string => {
-  if (typeof window !== 'undefined') {
-    return sessionStorage.getItem(TOKEN_KEY) ?? '';
-  }
+  if (typeof window !== 'undefined') return sessionStorage.getItem(TOKEN_KEY) ?? '';
   return '';
 };
 
-// ── Limpiar token al hacer logout ───────────────────────────────
 export const clearAccessToken = () => {
-  if (typeof window !== 'undefined') {
-    sessionStorage.removeItem(TOKEN_KEY);
-  }
+  if (typeof window !== 'undefined') sessionStorage.removeItem(TOKEN_KEY);
 };
 
-// ── Helpers de fetch ─────────────────────────────────────────────
-const post = async <T>(path: string, body: object, token?: string): Promise<T> => {
+// ── Helpers ──────────────────────────────────────────────────────
+const post = async <T>(path: string, body: object): Promise<T> => {
+  const token = getAccessToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_URL}${path}`, {
+
+  const res = await fetch(`${BASE}${path}`, {
     method:  'POST',
     headers,
     body:    JSON.stringify(body),
@@ -68,13 +64,12 @@ const post = async <T>(path: string, body: object, token?: string): Promise<T> =
   return res.json();
 };
 
-const get = async <T>(path: string, token?: string): Promise<T> => {
+const get = async <T>(path: string): Promise<T> => {
+  const token = getAccessToken();
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
-  const res = await fetch(`${API_URL}${path}`, {
-    method: 'GET',
-    headers,
-  });
+
+  const res = await fetch(`${BASE}${path}`, { method: 'GET', headers });
   return res.json();
 };
 
@@ -82,23 +77,20 @@ const get = async <T>(path: string, token?: string): Promise<T> => {
 export const authApi = {
 
   login: async (email: string, password: string): Promise<LoginResponse> => {
-    const data = await post<LoginResponse>('/api/auth/login', { email, password });
-    if (data.success && data.access_token) {
-      setAccessToken(data.access_token);
-    }
+    const data = await post<LoginResponse>('/auth/login', { email, password });
+    if (data.success && data.access_token) setAccessToken(data.access_token);
     return data;
   },
 
   logout: async () => {
-    const token = getAccessToken();
-    const data  = await post<{ success: boolean }>('/api/auth/logout', {}, token);
+    const data = await post<{ success: boolean }>('/auth/logout', {});
     clearAccessToken();
     return data;
   },
 
-  getSession:        () => get<SessionResponse>('/api/auth/session', getAccessToken()),
-  mfaEnroll:         () => post<MFAEnrollResponse>('/api/mfa/enroll', {}, getAccessToken()),
+  getSession:        () => get<SessionResponse>('/auth/session'),
+  mfaEnroll:         () => post<MFAEnrollResponse>('/mfa/enroll', {}),
   mfaVerify:         (factorId: string, code: string) =>
-                       post<MFAVerifyResponse>('/api/mfa/verify', { factor_id: factorId, code }, getAccessToken()),
-  getVerifiedFactor: () => get<FactorResponse>('/api/mfa/factor', getAccessToken()),
+                       post<MFAVerifyResponse>('/mfa/verify', { factor_id: factorId, code }),
+  getVerifiedFactor: () => get<FactorResponse>('/mfa/factor'),
 };
