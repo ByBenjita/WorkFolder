@@ -4,6 +4,7 @@ import { ok, err, OPTIONS } from '@/lib/response';
 
 export { OPTIONS };
 
+// ── Verificar código 2FA ───────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseForUser(req);

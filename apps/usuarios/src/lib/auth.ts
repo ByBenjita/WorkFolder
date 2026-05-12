@@ -13,6 +13,7 @@ export const getSupabaseForUser = (req: NextRequest) => {
   const authHeader = req.headers.get('Authorization') ?? '';
   const token = authHeader.replace('Bearer ', '').trim();
 
+  // Si no hay token, se crea un cliente sin autenticación (para evitar errores)
   return createClient(supabaseUrl, supabaseAnonKey, {
     global: {
       headers: { Authorization: `Bearer ${token}` },

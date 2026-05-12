@@ -4,6 +4,7 @@ import { ok, err, OPTIONS } from '@/lib/response';
 
 export { OPTIONS };
 
+// ── Obtener factor 2FA verificado ───────────────────────────────
 export async function GET(req: NextRequest) {
   try {
     const supabase = getSupabaseForUser(req);

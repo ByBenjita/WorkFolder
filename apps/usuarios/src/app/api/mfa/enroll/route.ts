@@ -18,6 +18,7 @@ export async function POST(req: NextRequest) {
       await supabase.auth.mfa.unenroll({ factorId: pendingFactor.id });
     }
 
+    // Enroll nuevo factor TOTP
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType:   'totp',
       issuer:       'WorkFolder',
