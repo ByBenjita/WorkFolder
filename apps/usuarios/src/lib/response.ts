@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 
+// ── Funciones de respuesta con CORS para las APIs ────────────────────────────────
 export const corsHeaders = {
   'Access-Control-Allow-Origin':      'http://localhost:3000',
   'Access-Control-Allow-Methods':     'GET, POST, PUT, DELETE, OPTIONS',

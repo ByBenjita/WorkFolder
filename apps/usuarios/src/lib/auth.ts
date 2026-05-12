@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 
+// Carga las variables de entorno para Supabase (asegúrarse de que estén definidas)
 const supabaseUrl     = process.env.SUPABASE_URL!;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY!;
 
