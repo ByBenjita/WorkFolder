@@ -1,7 +1,3 @@
-/**
- * Hook para manejar la lógica de documentos en la bóveda
- */
-
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -12,9 +8,9 @@ interface UseBovedaReturn {
   documents: DocumentMetadata[];
   loading: boolean;
   error: string | null;
-  uploadFile: (file: File) => Promise<boolean>;
+  uploadFile: (file: File, userKey: string) => Promise<boolean>;
   deleteFile: (documentId: string) => Promise<boolean>;
-  downloadFile: (documentId: string, fileName: string) => Promise<void>;
+  downloadFile: (documentId: string, fileName: string, userKey: string) => Promise<void>;
   refreshDocuments: () => Promise<void>;
   uploading: boolean;
 }
@@ -28,22 +24,17 @@ export function useBoveda(): UseBovedaReturn {
 
   const API_URL = '/api/documentos';
 
-
-  // Instancia del servicio — ya no necesita supabase, usa el token
   const documentService = useMemo(
     () => new DocumentService(API_URL, getAccessToken),
     [API_URL]
   );
 
-  // Obtener userId desde la sesión via authApi
+  // Obtener userId desde la sesión
   useEffect(() => {
     const checkSession = async () => {
       try {
         const token = getAccessToken();
-        if (!token) {
-          setLoading(false);
-          return;
-        }
+        if (!token) { setLoading(false); return; }
 
         const res  = await fetch('/api/auth/session', {
           headers: { Authorization: `Bearer ${token}` },
@@ -59,17 +50,13 @@ export function useBoveda(): UseBovedaReturn {
         setLoading(false);
       }
     };
-
     checkSession();
   }, []);
 
-  // Cargar documentos
   const refreshDocuments = useCallback(async () => {
     if (!userId) return;
-
     setLoading(true);
     setError(null);
-
     try {
       const { documents: docs, error: err } = await documentService.listDocuments(userId);
       if (err) {
@@ -92,17 +79,19 @@ export function useBoveda(): UseBovedaReturn {
     if (userId) refreshDocuments();
   }, [userId, refreshDocuments]);
 
-  // Subir archivo
+  // ── Subir archivo con clave del usuario ──────────────────────
   const uploadFile = useCallback(
-    async (file: File): Promise<boolean> => {
-      if (!userId) {
-        setError('Usuario no autenticado');
+    async (file: File, userKey: string): Promise<boolean> => {
+      if (!userId) { setError('Usuario no autenticado'); return false; }
+      if (!userKey || userKey.length < 8) {
+        setError('La clave debe tener al menos 8 caracteres');
         return false;
       }
+
       setUploading(true);
       setError(null);
       try {
-        const result = await documentService.uploadDocument(file, userId);
+        const result = await documentService.uploadDocument(file, userId, userKey);
         if (result.success && result.data) {
           setDocuments((prev) => [result.data!, ...prev]);
           return true;
@@ -120,7 +109,7 @@ export function useBoveda(): UseBovedaReturn {
     [userId, documentService]
   );
 
-  // Eliminar archivo
+  // ── Eliminar archivo ─────────────────────────────────────────
   const deleteFile = useCallback(
     async (documentId: string): Promise<boolean> => {
       setError(null);
@@ -141,12 +130,12 @@ export function useBoveda(): UseBovedaReturn {
     [documentService]
   );
 
-  // Descargar archivo
+  // ── Descargar archivo con clave del usuario ───────────────────
   const downloadFile = useCallback(
-    async (documentId: string, fileName: string): Promise<void> => {
+    async (documentId: string, fileName: string, userKey: string): Promise<void> => {
       setError(null);
       try {
-        const blob = await documentService.downloadDocument(documentId);
+        const blob = await documentService.downloadDocument(documentId, userKey);
         if (blob) {
           const url  = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
@@ -157,7 +146,7 @@ export function useBoveda(): UseBovedaReturn {
           document.body.removeChild(link);
           window.URL.revokeObjectURL(url);
         } else {
-          setError('No se pudo descargar el archivo');
+          setError('Clave incorrecta o error al descargar el archivo');
         }
       } catch {
         setError('Error en la descarga');
