@@ -6,22 +6,24 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
   try {
     const { search } = new URL(req.url);
     const targetUrl = `${DOCUMENTOS_API_URL}/api${search}`;
-    console.log('[proxy/documentos] →', targetUrl);
 
     const headers: Record<string, string> = {};
+
+    // Reenviar Authorization
     const auth = req.headers.get('Authorization');
     if (auth) headers['Authorization'] = auth;
+
+    // Reenviar x-user-key para descarga
+    const userKey = req.headers.get('x-user-key');
+    if (userKey) headers['x-user-key'] = userKey;
 
     const options: RequestInit = { method, headers };
 
     if (['POST', 'PUT', 'PATCH'].includes(method)) {
       const contentType = req.headers.get('content-type') ?? '';
-
       if (contentType.includes('multipart/form-data')) {
-        // Reenviar FormData manteniendo el Content-Type con boundary
         const formData = await req.formData();
         options.body = formData;
-        // No setear Content-Type — fetch lo genera automáticamente con boundary
       } else {
         headers['Content-Type'] = 'application/json';
         options.body = await req.text();

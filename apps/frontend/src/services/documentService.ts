@@ -1,6 +1,6 @@
 /**
  * Servicio para comunicarse con la API de documentos
- * Usa getAccessToken() en lugar de supabase directamente
+ * Maneja clave de cifrado por archivo
  */
 
 export interface DocumentMetadata {
@@ -34,16 +34,16 @@ class DocumentService {
     this.getToken = getToken;
   }
 
-  // ── El microservicio tiene todo en /api (sin /documents) ─────
-
-  async uploadDocument(file: File, userId: string): Promise<UploadResponse> {
+  /** Subir archivo con clave de cifrado del usuario */
+  async uploadDocument(file: File, userId: string, userKey: string): Promise<UploadResponse> {
     try {
       const token = this.getToken();
       if (!token) return { success: false, error: 'No autenticado' };
 
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', userId);
+      formData.append('file',     file);
+      formData.append('userId',   userId);
+      formData.append('userKey',  userKey);  // ← clave del usuario
 
       const response = await fetch(`${this.apiUrl}`, {
         method:  'POST',
@@ -60,6 +60,7 @@ class DocumentService {
     }
   }
 
+  /** Listar documentos del usuario */
   async listDocuments(userId: string): Promise<DocumentListResponse> {
     try {
       const token = this.getToken();
@@ -79,17 +80,25 @@ class DocumentService {
     }
   }
 
-  async downloadDocument(documentId: string): Promise<Blob | null> {
+  /** Descargar archivo — requiere la clave del usuario */
+  async downloadDocument(documentId: string, userKey: string): Promise<Blob | null> {
     try {
       const token = this.getToken();
       if (!token) return null;
 
       const response = await fetch(`${this.apiUrl}?id=${documentId}`, {
         method:  'GET',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'x-user-key':  userKey,  // ← clave del usuario para descifrar
+        },
       });
 
-      if (!response.ok) return null;
+      if (!response.ok) {
+        const json = await response.json().catch(() => ({}));
+        console.error('Error descargando:', json.error);
+        return null;
+      }
       return await response.blob();
 
     } catch {
@@ -97,6 +106,7 @@ class DocumentService {
     }
   }
 
+  /** Eliminar documento */
   async deleteDocument(documentId: string): Promise<{ success: boolean; error?: string }> {
     try {
       const token = this.getToken();
