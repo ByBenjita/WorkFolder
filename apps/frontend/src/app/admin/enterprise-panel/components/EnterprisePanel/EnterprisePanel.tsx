@@ -7,13 +7,17 @@ import {
   useHomeSection,
   MOCK_LOGS,
   CORP_USERS,
-  VAULT_FILES,
   SECURITY_CHECKS,
   INVOICES,
   RRHH_RECEPTORS,
 } from './useEnterprisePanel';
 
-interface Props { section: AdminSection; }
+// ✨ NUEVO: Importar el componente de Bóveda actualizado
+import BovedaPanel from '../../../../components/boveda/BovedaPanel';
+
+interface Props {
+  section: AdminSection;
+}
 
 // ── Componentes reutilizables ────────────────────────────────────
 const Stat = ({ label, value, sub, accent }: { label: string; value: string; sub: string; accent?: boolean }) => (
@@ -122,36 +126,10 @@ function UsuariosSection() {
   );
 }
 
-// ── Sección BÓVEDA ───────────────────────────────────────────────
+// ── Sección BÓVEDA (ACTUALIZADO) ─────────────────────────────────
+// ✨ AHORA USANDO EL COMPONENTE REAL CON SUPABASE
 function BovedaSection() {
-  return (
-    <div>
-      <SectionTitle>Bóveda Enterprise</SectionTitle>
-      <div className="stats-row">
-        <Stat label="Almacenamiento" value="126 GB" sub="de 1 TB usado" />
-        <Stat label="Archivos"       value="1,247"  sub="en 8 categorías" accent />
-        <Stat label="Compartidos"    value="34"     sub="activos este mes" />
-      </div>
-      <Card>
-        <div className="card-header">
-          <h3 className="card-title">Archivos Recientes</h3>
-          <button className="btn-primary">↑ Subir Archivo</button>
-        </div>
-        {VAULT_FILES.map((f, i) => (
-          <div key={i} className="item-row">
-            <div className="item-left">
-              <div className="file-icon">📄</div>
-              <div>
-                <p className="file-name">{f.name}</p>
-                <p className="file-meta">{f.size} · {f.date}</p>
-              </div>
-            </div>
-            <span className="chip">{f.category}</span>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
+  return <BovedaPanel />;
 }
 
 // ── Sección SEGURIDAD ────────────────────────────────────────────
@@ -264,12 +242,12 @@ function RRHHSection() {
   );
 }
 
-// ── Mapa de secciones ────────────────────────────────────────────
+// ── Mapa de secciones (ACTUALIZADO) ──────────────────────────────
 const SECTION_MAP: Record<AdminSection, React.ReactNode> = {
   home:        <HomeSection />,
   usuarios:    <UsuariosSection />,
   rrhh:        <RRHHSection />,
-  boveda:      <BovedaSection />,
+  boveda:      <BovedaSection />,           // ✨ Ahora usa el componente real
   seguridad:   <SeguridadSection />,
   auditoria:   <AuditoriaSection />,
   facturacion: <FacturacionSection />,
