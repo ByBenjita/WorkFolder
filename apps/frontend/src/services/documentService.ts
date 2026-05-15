@@ -1,10 +1,7 @@
 /**
  * Servicio para comunicarse con la API de documentos
- * Actualizado a @supabase/supabase-js
- * Maneja: upload, download, listar, borrar
+ * Usa getAccessToken() en lugar de supabase directamente
  */
-
-import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface DocumentMetadata {
   id: string;
@@ -30,166 +27,93 @@ export interface DocumentListResponse {
 
 class DocumentService {
   private apiUrl: string;
-  private supabase: SupabaseClient;
+  private getToken: () => string;
 
-  constructor(apiUrl: string, supabase: SupabaseClient) {
-    this.apiUrl = apiUrl;
-    this.supabase = supabase;
+  constructor(apiUrl: string, getToken: () => string) {
+    this.apiUrl   = apiUrl;
+    this.getToken = getToken;
   }
 
-  /**
-   * Obtener el token de autenticación actual
-   */
-  private async getAuthToken(): Promise<string | null> {
-    try {
-      const {
-        data: { session },
-      } = await this.supabase.auth.getSession();
-      return session?.access_token || null;
-    } catch (error) {
-      console.error('Error obteniendo token:', error);
-      return null;
-    }
-  }
+  // ── El microservicio tiene todo en /api (sin /documents) ─────
 
-  /**
-   * Subir un documento nuevo
-   */
   async uploadDocument(file: File, userId: string): Promise<UploadResponse> {
     try {
-      const token = await this.getAuthToken();
-      if (!token) {
-        return { success: false, error: 'No autenticado' };
-      }
+      const token = this.getToken();
+      if (!token) return { success: false, error: 'No autenticado' };
 
       const formData = new FormData();
       formData.append('file', file);
       formData.append('userId', userId);
 
-      const response = await fetch(`${this.apiUrl}/documents`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
+      const response = await fetch(`${this.apiUrl}`, {
+        method:  'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body:    formData,
       });
 
       const json = await response.json();
-
-      if (!response.ok) {
-        return { success: false, error: json.error || 'Error al subir archivo' };
-      }
-
+      if (!response.ok) return { success: false, error: json.error || 'Error al subir archivo' };
       return { success: true, data: json.data };
+
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
-  /**
-   * Listar documentos del usuario actual
-   */
   async listDocuments(userId: string): Promise<DocumentListResponse> {
     try {
-      const token = await this.getAuthToken();
-      if (!token) {
-        return { documents: [], error: 'No autenticado' };
-      }
+      const token = this.getToken();
+      if (!token) return { documents: [], error: 'No autenticado' };
 
-      const response = await fetch(`${this.apiUrl}/documents?userId=${userId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+      const response = await fetch(`${this.apiUrl}?userId=${userId}`, {
+        method:  'GET',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
 
       const json = await response.json();
-
-      if (!response.ok) {
-        return { documents: [], error: json.error || 'Error al obtener documentos' };
-      }
-
+      if (!response.ok) return { documents: [], error: json.error || 'Error al obtener documentos' };
       return { documents: json.data || [] };
+
     } catch (error) {
       return { documents: [], error: (error as Error).message };
     }
   }
 
-  /**
-   * Descargar un documento (descifrado)
-   */
   async downloadDocument(documentId: string): Promise<Blob | null> {
     try {
-      const token = await this.getAuthToken();
-      if (!token) {
-        console.error('No autenticado');
-        return null;
-      }
+      const token = this.getToken();
+      if (!token) return null;
 
-      const response = await fetch(
-        `${this.apiUrl}/documents?id=${documentId}`,
-        {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await fetch(`${this.apiUrl}?id=${documentId}`, {
+        method:  'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      if (!response.ok) {
-        const json = await response.json();
-        console.error('Error descargando:', json.error);
-        return null;
-      }
-
+      if (!response.ok) return null;
       return await response.blob();
-    } catch (error) {
-      console.error('Error en download:', error);
+
+    } catch {
       return null;
     }
   }
 
-  /**
-   * Eliminar un documento
-   */
   async deleteDocument(documentId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const token = await this.getAuthToken();
-      if (!token) {
-        return { success: false, error: 'No autenticado' };
-      }
+      const token = this.getToken();
+      if (!token) return { success: false, error: 'No autenticado' };
 
-      const response = await fetch(
-        `${this.apiUrl}/documents?id=${documentId}`,
-        {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const response = await fetch(`${this.apiUrl}?id=${documentId}`, {
+        method:  'DELETE',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
 
       const json = await response.json();
-
-      if (!response.ok) {
-        return { success: false, error: json.error || 'Error al eliminar documento' };
-      }
-
+      if (!response.ok) return { success: false, error: json.error || 'Error al eliminar documento' };
       return { success: true };
+
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
-  }
-
-  /**
-   * Obtener URL de descarga directa (si aplica)
-   */
-  async getDownloadUrl(documentId: string): Promise<string | null> {
-    // Esta función es opcional - depende de cómo quieras servir los archivos
-    // Por ahora, retorna null - usa downloadDocument() en su lugar
-    return null;
   }
 }
 

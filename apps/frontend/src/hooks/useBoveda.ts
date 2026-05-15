@@ -5,7 +5,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { supabase } from '../../../usuarios/src/services/supabase';
+import { getAccessToken } from '@/services/authApi';
 import DocumentService, { DocumentMetadata } from '../services/documentService';
 
 interface UseBovedaReturn {
@@ -21,44 +21,46 @@ interface UseBovedaReturn {
 
 export function useBoveda(): UseBovedaReturn {
   const [documents, setDocuments] = useState<DocumentMetadata[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId]       = useState<string | null>(null);
 
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api';
+  const API_URL = '/api/documentos';
 
-  // Instancia del servicio
+
+  // Instancia del servicio — ya no necesita supabase, usa el token
   const documentService = useMemo(
-    () => new DocumentService(API_URL, supabase),
+    () => new DocumentService(API_URL, getAccessToken),
     [API_URL]
   );
 
-  // Manejo de Sesión
+  // Obtener userId desde la sesión via authApi
   useEffect(() => {
-    let mounted = true;
-
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (mounted) {
-        setUserId(session?.user?.id || null);
-        if (!session) setLoading(false);
+      try {
+        const token = getAccessToken();
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const res  = await fetch('/api/auth/session', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (data.success && data.user?.id) {
+          setUserId(data.user.id);
+        } else {
+          setLoading(false);
+        }
+      } catch {
+        setLoading(false);
       }
     };
 
     checkSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (mounted) {
-        setUserId(session?.user?.id || null);
-        if (!session) setLoading(false);
-      }
-    });
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
   }, []);
 
   // Cargar documentos
@@ -79,7 +81,7 @@ export function useBoveda(): UseBovedaReturn {
         );
         setDocuments(sorted);
       }
-    } catch (e) {
+    } catch {
       setError('Error de conexión al cargar documentos');
     } finally {
       setLoading(false);
@@ -97,10 +99,8 @@ export function useBoveda(): UseBovedaReturn {
         setError('Usuario no autenticado');
         return false;
       }
-
       setUploading(true);
       setError(null);
-
       try {
         const result = await documentService.uploadDocument(file, userId);
         if (result.success && result.data) {
@@ -133,7 +133,7 @@ export function useBoveda(): UseBovedaReturn {
           setError(result.error || 'Error al eliminar archivo');
           return false;
         }
-      } catch (err) {
+      } catch {
         setError('No se pudo eliminar el archivo');
         return false;
       }
@@ -148,9 +148,9 @@ export function useBoveda(): UseBovedaReturn {
       try {
         const blob = await documentService.downloadDocument(documentId);
         if (blob) {
-          const url = window.URL.createObjectURL(blob);
+          const url  = window.URL.createObjectURL(blob);
           const link = document.createElement('a');
-          link.href = url;
+          link.href     = url;
           link.download = fileName;
           document.body.appendChild(link);
           link.click();
@@ -159,7 +159,7 @@ export function useBoveda(): UseBovedaReturn {
         } else {
           setError('No se pudo descargar el archivo');
         }
-      } catch (err) {
+      } catch {
         setError('Error en la descarga');
       }
     },
