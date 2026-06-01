@@ -56,3 +56,4 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
 export async function GET(req: NextRequest)    { return proxyToDocumentos(req, 'GET');    }
 export async function POST(req: NextRequest)   { return proxyToDocumentos(req, 'POST');   }
 export async function DELETE(req: NextRequest) { return proxyToDocumentos(req, 'DELETE'); }
+export async function PATCH(req: NextRequest)  { return proxyToDocumentos(req, 'PATCH');  }

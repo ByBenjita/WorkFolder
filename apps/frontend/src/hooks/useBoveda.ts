@@ -11,6 +11,7 @@ interface UseBovedaReturn {
   uploadFile: (file: File, userKey: string) => Promise<boolean>;
   deleteFile: (documentId: string) => Promise<boolean>;
   downloadFile: (documentId: string, fileName: string, userKey: string) => Promise<void>;
+  rekeyFile: (documentId: string, newKey: string, mfaCode: string, factorId: string) => Promise<{ success: boolean; error?: string }>;
   refreshDocuments: () => Promise<void>;
   uploading: boolean;
 }
@@ -155,6 +156,31 @@ export function useBoveda(): UseBovedaReturn {
     [documentService]
   );
 
+  // ── Re-cifrar archivo con nueva clave (requiere 2FA) ──────────
+  const rekeyFile = useCallback(
+    async (
+      documentId: string,
+      newKey: string,
+      mfaCode: string,
+      factorId: string
+    ): Promise<{ success: boolean; error?: string }> => {
+      setError(null);
+      try {
+        const result = await documentService.rekeyDocument(documentId, newKey, mfaCode, factorId);
+        if (!result.success) {
+          setError(result.error || 'Error al cambiar la clave');
+          return { success: false, error: result.error };
+        }
+        return { success: true };
+      } catch {
+        const msg = 'Error al cambiar la clave del documento';
+        setError(msg);
+        return { success: false, error: msg };
+      }
+    },
+    [documentService]
+  );
+
   return {
     documents,
     loading,
@@ -162,6 +188,7 @@ export function useBoveda(): UseBovedaReturn {
     uploadFile,
     deleteFile,
     downloadFile,
+    rekeyFile,
     refreshDocuments,
     uploading,
   };

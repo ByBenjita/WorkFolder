@@ -1,3 +1,6 @@
+
+
+
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { encryptBuffer, decryptBuffer } from '@workfolder/utils';
@@ -8,6 +11,9 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const MASTER_KEY  = process.env.ENCRYPTION_KEY!;
 const BUCKET_NAME = 'documentos_cifrados';
@@ -67,6 +73,18 @@ function decryptUserKey(encryptedKey: string): string {
   const decipher  = crypto.createDecipheriv('aes-256-cbc', keyBuffer, iv);
   const decrypted = Buffer.concat([decipher.update(Buffer.from(encHex, 'hex')), decipher.final()]);
   return decrypted.toString('utf8');
+}
+// Crea un cliente de Supabase con el token del usuario para operaciones que requieren autenticación
+function createUserSupabaseClient(token: string) {
+  return createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+    auth:   { autoRefreshToken: false, persistSession: false },
+  });
+}
+// Verifica si el usuario es admin para permitir acceso a funciones avanzadas
+async function checkUserIsAdmin(userId: string): Promise<boolean> {
+  const { data } = await supabase.auth.admin.getUserById(userId);
+  return data?.user?.app_metadata?.role === 'admin';
 }
 
 // ── POST: Subir documento ────────────────────────────────────────
@@ -191,7 +209,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // CASO 2: Listar documentos
+    // CASO 2: Listar documentos del usuario
     if (userId && userId === authUserId) {
       const { data: documents, error: dbError } = await supabase
         .from('documentos_metadata')
@@ -204,11 +222,159 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ data: documents || [] });
     }
 
+    // CASO 3: Admin - listar todos los documentos
+    if (searchParams.get('adminAll') === 'true') {
+      const isAdmin = await checkUserIsAdmin(authUserId);
+      if (!isAdmin) return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+
+      const { data: documents, error: dbError } = await supabase
+        .from('documentos_metadata')
+        .select('id, user_id, nombre_original, ruta_storage, tamano_bytes, tipo_mime, creado_en, actualizado_en')
+        .order('creado_en', { ascending: false });
+
+      if (dbError) return NextResponse.json({ error: 'Error obteniendo documentos' }, { status: 500 });
+
+      const uniqueUserIds = [...new Set((documents || []).map((d: { user_id: string }) => d.user_id))];
+      const userEmailMap: Record<string, string> = {};
+
+      await Promise.all(
+        uniqueUserIds.map(async (uid) => {
+          const { data } = await supabase.auth.admin.getUserById(uid as string);
+          if (data?.user?.email) userEmailMap[uid as string] = data.user.email;
+        })
+      );
+
+      const enriched = (documents || []).map((d: { user_id: string }) => ({
+        ...d,
+        user_email: userEmailMap[d.user_id] || d.user_id,
+      }));
+
+      return NextResponse.json({ data: enriched });
+    }
+
     return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 });
 
   } catch (err: any) {
     console.error('GET error:', err);
     return NextResponse.json({ error: err.message || 'Error en la solicitud' }, { status: 500 });
+  }
+}
+
+// ── PATCH: Re-cifrar documento con nueva clave ───────────────────
+export async function PATCH(req: NextRequest) {
+  try {
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+    const token = authHeader.slice(7);
+
+    const userId = await getUserFromRequest(req);
+    if (!userId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+
+    const { documentId, newKey, mfaCode, factorId, adminOverride } = await req.json();
+
+    if (!documentId || !newKey || newKey.length < 8) {
+      return NextResponse.json(
+        { error: 'documentId y newKey (mínimo 8 caracteres) son requeridos' },
+        { status: 400 }
+      );
+    }
+
+    if (adminOverride) {
+      const isAdmin = await checkUserIsAdmin(userId);
+      if (!isAdmin) {
+        return NextResponse.json({ error: 'Permisos insuficientes' }, { status: 403 });
+      }
+    } else {
+      const hasAccess = await validateDocumentOwnership(documentId, userId);
+      if (!hasAccess) {
+        return NextResponse.json({ error: 'No tienes acceso a este documento' }, { status: 403 });
+      }
+
+      if (!mfaCode || !factorId) {
+        return NextResponse.json(
+          { error: 'Se requiere verificación 2FA para cambiar la clave', code: 'REQUIRES_2FA' },
+          { status: 403 }
+        );
+      }
+
+      const userClient = createUserSupabaseClient(token);
+      const { error: mfaError } = await userClient.auth.mfa.challengeAndVerify({
+        factorId,
+        code: mfaCode,
+      });
+      if (mfaError) {
+        return NextResponse.json({ error: 'Código 2FA incorrecto o expirado' }, { status: 401 });
+      }
+    }
+
+    const { data: meta, error: metaError } = await supabase
+      .from('documentos_metadata')
+      .select('*')
+      .eq('id', documentId)
+      .single();
+
+    if (metaError || !meta) {
+      return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 });
+    }
+
+    if (!meta.clave_cifrada) {
+      return NextResponse.json(
+        { error: 'Este documento no tiene clave de cifrado registrada.' },
+        { status: 422 }
+      );
+    }
+
+    let currentKey: string;
+    try {
+      currentKey = decryptUserKey(meta.clave_cifrada);
+    } catch (decryptErr: any) {
+      console.error('decryptUserKey error:', decryptErr.message, '| formato clave_cifrada:', typeof meta.clave_cifrada, meta.clave_cifrada?.slice(0, 20));
+      return NextResponse.json(
+        { error: 'Error al descifrar la clave del documento: ' + decryptErr.message },
+        { status: 500 }
+      );
+    }
+
+    const { data: fileData, error: storageError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .download(meta.ruta_storage);
+
+    if (storageError || !fileData) {
+      return NextResponse.json({ error: 'Error descargando el archivo' }, { status: 500 });
+    }
+
+    const encryptedBuffer    = Buffer.from(await fileData.arrayBuffer());
+    const decryptedBuffer    = decryptBuffer(encryptedBuffer, currentKey);
+    const newEncryptedBuffer = encryptBuffer(decryptedBuffer, newKey);
+
+    const { error: uploadError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .upload(meta.ruta_storage, newEncryptedBuffer, {
+        contentType: 'application/octet-stream',
+        upsert:      true,
+      });
+
+    if (uploadError) {
+      return NextResponse.json({ error: 'Error actualizando el archivo cifrado' }, { status: 500 });
+    }
+
+    const newEncryptedKey = encryptUserKey(newKey);
+    const { error: dbError } = await supabase
+      .from('documentos_metadata')
+      .update({ clave_cifrada: newEncryptedKey })
+      .eq('id', documentId);
+
+    if (dbError) {
+      return NextResponse.json({ error: 'Error actualizando la clave en base de datos' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Clave actualizada correctamente' });
+
+  } catch (err: any) {
+    console.error('PATCH error:', err);
+    return NextResponse.json({ error: err.message || 'Error al cambiar la clave' }, { status: 500 });
   }
 }
 
