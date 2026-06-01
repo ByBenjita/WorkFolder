@@ -1,8 +1,3 @@
-/**
- * Servicio para comunicarse con la API de documentos
- * Maneja clave de cifrado por archivo
- */
-
 export interface DocumentMetadata {
   id: string;
   user_id: string;
@@ -14,6 +9,10 @@ export interface DocumentMetadata {
   actualizado_en: string;
 }
 
+export interface AdminDocumentMetadata extends DocumentMetadata {
+  user_email: string;
+}
+
 export interface UploadResponse {
   success: boolean;
   data?: DocumentMetadata;
@@ -22,6 +21,11 @@ export interface UploadResponse {
 
 export interface DocumentListResponse {
   documents: DocumentMetadata[];
+  error?: string;
+}
+
+export interface RekeyResponse {
+  success: boolean;
   error?: string;
 }
 
@@ -123,6 +127,73 @@ class DocumentService {
 
     } catch (error) {
       return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /** Re-cifrar documento con nueva clave — requiere código 2FA del usuario */
+  async rekeyDocument(
+    documentId: string,
+    newKey: string,
+    mfaCode: string,
+    factorId: string
+  ): Promise<RekeyResponse> {
+    try {
+      const token = this.getToken();
+      if (!token) return { success: false, error: 'No autenticado' };
+
+      const response = await fetch(this.apiUrl, {
+        method:  'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ documentId, newKey, mfaCode, factorId }),
+      });
+
+      const json = await response.json();
+      if (!response.ok) return { success: false, error: json.error || 'Error al cambiar la clave' };
+      return { success: true };
+
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /** Re-cifrar cualquier documento — solo para administradores */
+  async adminRekeyDocument(documentId: string, newKey: string): Promise<RekeyResponse> {
+    try {
+      const token = this.getToken();
+      if (!token) return { success: false, error: 'No autenticado' };
+
+      const response = await fetch(this.apiUrl, {
+        method:  'PATCH',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ documentId, newKey, adminOverride: true }),
+      });
+
+      const json = await response.json();
+      if (!response.ok) return { success: false, error: json.error || 'Error al restablecer la clave' };
+      return { success: true };
+
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  /** Listar todos los documentos del sistema — solo para administradores */
+  async adminListAllDocuments(): Promise<{ documents: AdminDocumentMetadata[]; error?: string }> {
+    try {
+      const token = this.getToken();
+      if (!token) return { documents: [], error: 'No autenticado' };
+
+      const response = await fetch(`${this.apiUrl}?adminAll=true`, {
+        method:  'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const json = await response.json();
+      if (!response.ok) return { documents: [], error: json.error || 'Error al obtener documentos' };
+      return { documents: json.data || [] };
+
+    } catch (error) {
+      return { documents: [], error: (error as Error).message };
     }
   }
 }
