@@ -6,14 +6,14 @@ import { panelStyles } from './EnterprisePanel.styles';
 import {
   useHomeSection,
   MOCK_LOGS,
-  CORP_USERS,
   SECURITY_CHECKS,
   INVOICES,
   RRHH_RECEPTORS,
 } from './useEnterprisePanel';
 
-// ✨ NUEVO: Importar el componente de Bóveda actualizado
-import BovedaPanel from '../../../../components/boveda/BovedaPanel';
+import BovedaPanel      from '../../../../components/boveda/BovedaPanel';
+import AdminBovedaPanel from '../AdminBovedaPanel/AdminBovedaPanel';
+import AdminUsersPanel  from '../AdminUsersPanel';
 
 interface Props {
   section: AdminSection;
@@ -95,41 +95,17 @@ function HomeSection() {
 
 // ── Sección USUARIOS ─────────────────────────────────────────────
 function UsuariosSection() {
-  return (
-    <div>
-      <SectionTitle>Usuarios Corp</SectionTitle>
-      <Card>
-        <div className="card-header">
-          <p className="text-muted">5 de 5 usuarios activos (plan completo)</p>
-          <button className="btn-primary">+ Nuevo Usuario</button>
-        </div>
-        <table className="data-table">
-          <thead>
-            <tr>
-              {['Nombre', 'Email', 'Rol', 'Estado', 'Acciones'].map(h => <th key={h}>{h}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {CORP_USERS.map((u, i) => (
-              <tr key={i}>
-                <td className="td-white">{u.name}</td>
-                <td className="td-muted">{u.email}</td>
-                <td><span className={`chip ${u.role === 'Administrador' ? 'blue' : ''}`}>{u.role}</span></td>
-                <td><span className={`chip ${u.status === 'activo' ? 'green' : ''}`}>{u.status}</span></td>
-                <td><button className="btn-ghost">Editar</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-    </div>
-  );
+  return <AdminUsersPanel />;
 }
 
-// ── Sección BÓVEDA (ACTUALIZADO) ─────────────────────────────────
-// ✨ AHORA USANDO EL COMPONENTE REAL CON SUPABASE
+// ── Sección BÓVEDA ───────────────────────────────────────────────
 function BovedaSection() {
-  return <BovedaPanel />;
+  return (
+    <div>
+      <BovedaPanel />
+      <AdminBovedaPanel />
+    </div>
+  );
 }
 
 // ── Sección SEGURIDAD ────────────────────────────────────────────

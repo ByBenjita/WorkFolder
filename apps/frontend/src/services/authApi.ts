@@ -34,6 +34,14 @@ export interface SessionResponse {
   aal:     { current: string; next: string; mfa_complete: boolean };
 }
 
+export interface AdminUser {
+  id:         string;
+  email:      string;
+  role:       string;
+  is_admin:   boolean;
+  created_at: string;
+}
+
 // ── Token en sessionStorage ──────────────────────────────────────
 const TOKEN_KEY = 'wf_access_token';
 
@@ -93,4 +101,6 @@ export const authApi = {
   mfaVerify:         (factorId: string, code: string) =>
                        post<MFAVerifyResponse>('/mfa/verify', { factor_id: factorId, code }),
   getVerifiedFactor: () => get<FactorResponse>('/mfa/factor'),
+  adminListUsers:    () => get<{ success: boolean; users: AdminUser[] }>('/admin/users'),
+  adminPromoteUser:  (userId: string) => post<{ success: boolean; message: string }>('/admin/promote', { userId }),
 };
