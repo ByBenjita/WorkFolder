@@ -4,13 +4,60 @@ export const adminBovedaPanelStyles = css.global`
 
   /* ── Raiz del panel ── */
   .abp-root {
-    margin-top: 32px;
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid oklch(0.92 0.006 262);
+  }
+
+  /* ── Encabezado admin ── */
+  .abp-head {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .abp-badge {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    background: linear-gradient(150deg, oklch(0.255 0.03 264), oklch(0.225 0.03 264));
+    box-shadow: 0 4px 12px oklch(0.4 0.03 262 / 0.18);
+  }
+
+  .abp-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: oklch(0.26 0.025 262);
+    margin: 0;
+  }
+
+  .abp-pill {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    background-color: oklch(0.26 0.025 262);
+    color: #ffffff;
+    padding: 3px 9px;
+    border-radius: 6px;
   }
 
   .abp-desc {
-    color: #6b7280;
+    color: oklch(0.60 0.018 262);
     font-size: 13px;
-    margin-bottom: 20px;
+    margin: 3px 0 0;
+    max-width: 620px;
+    line-height: 1.5;
   }
 
   /* ── Mensajes de estado ── */
@@ -76,28 +123,49 @@ export const adminBovedaPanelStyles = css.global`
   }
 
   .abp-doc-icon {
-    background: #f3f4f6;
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
+    border-radius: 11px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
-    color: #6b7280;
+    letter-spacing: -0.5px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  .abp-doc-icon.av-1 {
+    background: linear-gradient(135deg, oklch(0.6 0.15 256), oklch(0.5 0.16 270));
+  }
+
+  .abp-doc-icon.av-2 {
+    background: linear-gradient(135deg, oklch(0.62 0.14 300), oklch(0.52 0.15 320));
+  }
+
+  .abp-doc-owner {
+    color: oklch(0.60 0.018 262);
   }
 
   .abp-doc-user-email {
     font-size: 11px;
-    color: #9ca3af;
-    margin-top: 2px;
+    color: oklch(0.60 0.018 262);
+    margin-top: 3px;
   }
 
   .abp-btn-reset {
-    padding: 6px 12px;
-    font-size: 13px;
-    color: #dc2626;
+    padding: 7px 13px;
+    font-size: 12px;
+    color: oklch(0.55 0.12 70);
+    font-weight: 600;
+    transition: border-color 0.14s ease, background 0.14s ease, color 0.14s ease;
+  }
+
+  .abp-btn-reset:hover {
+    border-color: oklch(0.74 0.12 78);
+    background-color: oklch(0.97 0.05 86);
+    color: oklch(0.50 0.12 70);
   }
 
   /* ── Modal overlay ── */
