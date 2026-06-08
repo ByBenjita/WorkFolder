@@ -19,27 +19,25 @@ export async function POST(req: NextRequest) {
     if (userError || !user) return err('No autorizado', 401);
     if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
 
-    const { email, password, level, permissions } = await req.json();
-    if (!email)    return err('email es requerido', 400);
-    if (!password) return err('contraseña es requerida', 400);
-    if (password.length < 8) return err('La contraseña debe tener al menos 8 caracteres', 400);
+    const { email, password, level, permissions, fullName } = await req.json();
+    if (!email || !password) return err('email y password son requeridos', 400);
 
-    const appMeta = {
-      role:        level === 'admin_principal' ? 'admin' : 'user',
-      level:       level ?? 'estandar',
-      permissions: permissions ?? { create_users: false, view_audit: false, manage_billing: false },
-    };
+    const appMeta: Record<string, unknown> = { level: level ?? 'estandar', permissions: permissions ?? {} };
+    if (level === 'admin_principal' || level === 'admin_delegado') {
+      appMeta.role = 'admin';
+    }
 
     const { data, error: createError } = await serviceClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       app_metadata:  appMeta,
+      user_metadata: { full_name: fullName ?? null },
     });
 
     if (createError) return err('Error al crear usuario: ' + createError.message, 500);
 
-    return ok({ message: `Usuario ${email} creado correctamente.`, userId: data?.user?.id });
+    return ok({ message: `Usuario ${data.user?.email} creado correctamente.`, userId: data.user?.id });
 
   } catch (e: any) {
     return err('Error interno: ' + e.message, 500);

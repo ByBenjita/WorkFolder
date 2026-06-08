@@ -19,25 +19,32 @@ export async function POST(req: NextRequest) {
     if (userError || !user) return err('No autorizado', 401);
     if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
 
-    const { userId, level, permissions, banned } = await req.json();
+    const { userId, level, permissions, banned, fullName } = await req.json();
     if (!userId) return err('userId es requerido', 400);
-    if (userId === user.id) return err('No puedes modificar tu propio acceso desde aqui', 400);
 
     const { data: targetData, error: targetError } = await serviceClient.auth.admin.getUserById(userId);
     if (targetError || !targetData?.user) return err('Usuario no encontrado', 404);
 
-    const newMeta = {
-      ...targetData.user.app_metadata,
-      role:        level === 'admin_principal' ? 'admin' : 'user',
-      level:       level,
-      permissions: permissions,
+    const existingMeta     = targetData.user.app_metadata ?? {};
+    const existingUserMeta = targetData.user.user_metadata ?? {};
+    const newRole = (level === 'admin_principal' || level === 'admin_delegado') ? 'admin' : existingMeta.role ?? null;
+
+    const updatedMeta: Record<string, unknown> = { ...existingMeta, level, permissions };
+    if (newRole) updatedMeta.role = newRole;
+    else delete updatedMeta.role;
+
+    const updatePayload: Record<string, unknown> = {
+      app_metadata:  updatedMeta,
+      user_metadata: { ...existingUserMeta, full_name: fullName !== undefined ? fullName : existingUserMeta.full_name },
     };
 
-    const updatePayload: Record<string, unknown> = { app_metadata: newMeta };
-
-    // Banear (deshabilitar) o desbanear
-    if (banned === true)  updatePayload.ban_duration = '876600h';
-    if (banned === false) updatePayload.ban_duration = 'none';
+    if (banned) {
+      const banUntil = new Date();
+      banUntil.setFullYear(banUntil.getFullYear() + 100);
+      updatePayload.ban_duration = `${Math.floor((banUntil.getTime() - Date.now()) / 1000)}s`;
+    } else {
+      updatePayload.ban_duration = 'none';
+    }
 
     const { error: updateError } = await serviceClient.auth.admin.updateUserById(userId, updatePayload as any);
     if (updateError) return err('Error al actualizar usuario: ' + updateError.message, 500);
