@@ -2,5 +2,10 @@ packages:
   - 'apps/*'
   - 'packages/*'
 allowBuilds:
+  '@scarf/scarf': true
+  '@tree-sitter-grammars/tree-sitter-yaml': true
+  core-js-pure: true
   sharp: true
+  tree-sitter: true
+  tree-sitter-json: true
   unrs-resolver: true
