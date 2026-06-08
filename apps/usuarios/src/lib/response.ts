@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 
 // ── Funciones de respuesta con CORS para las APIs ────────────────────────────────
+const allowedOrigin = process.env.FRONTEND_URL ?? 'http://localhost:3000';
+
 export const corsHeaders = {
-  'Access-Control-Allow-Origin':      'http://localhost:3000',
+  'Access-Control-Allow-Origin':      allowedOrigin,
   'Access-Control-Allow-Methods':     'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers':     'Content-Type, Authorization',
   'Access-Control-Allow-Credentials': 'true',
