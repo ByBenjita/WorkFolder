@@ -9,17 +9,23 @@ import { sidebarStyles } from './EnterpriseSidebar.styles';
 const Icons: Record<string, React.ReactNode> = {
   Home: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+      <polyline points="9 22 9 12 15 12 15 22"/>
     </svg>
   ),
   Users: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
     </svg>
   ),
   UserCheck: (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><polyline points="17 11 19 13 23 9"/>
+      <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="8.5" cy="7" r="4"/>
+      <polyline points="17 11 19 13 23 9"/>
     </svg>
   ),
   FolderLock: (
@@ -50,6 +56,12 @@ interface Props {
   userEmail: string;
 }
 
+// ── Grupos de navegación ────────────────────────────────
+const NAV_GROUPS: { label: string; ids: AdminSection[] }[] = [
+  { label: 'Plataforma',     ids: ['home', 'usuarios', 'rrhh'] },
+  { label: 'Almacenamiento', ids: ['boveda', 'seguridad', 'auditoria', 'facturacion'] },
+];
+
 export default function EnterpriseSidebar({ active, onSelect, userEmail }: Props) {
   const { loggingOut, handleLogout } = useSidebar();
 
@@ -68,31 +80,39 @@ export default function EnterpriseSidebar({ active, onSelect, userEmail }: Props
 
       {/* ── Nav ── */}
       <nav className="nav">
-        {NAV_ITEMS.map((item) => {
-          const isActive = active === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => onSelect(item.id)}
-              className={`nav-button ${isActive ? 'active' : ''}`}
-            >
-              <span className="nav-icon">{Icons[item.iconName]}</span>
-              <span className="nav-label">{item.label}</span>
-              {item.badge && (
-                <span className={`nav-badge ${isActive ? 'active' : ''}`}>
-                  {item.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        {NAV_GROUPS.map((group) => (
+          <React.Fragment key={group.label}>
+            <div className="nav-group-label">{group.label}</div>
+            {NAV_ITEMS.filter((i) => group.ids.includes(i.id)).map((item) => {
+              const isActive = active === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => onSelect(item.id)}
+                  className={`nav-button ${isActive ? 'active' : ''}`}
+                >
+                  <span className="nav-icon">{Icons[item.iconName]}</span>
+                  <span className="nav-label">{item.label}</span>
+                  {item.badge && (
+                    <span className={`nav-badge ${isActive ? 'active' : ''}`}>
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </React.Fragment>
+        ))}
       </nav>
 
       {/* ── Footer ── */}
       <div className="sidebar-footer">
         <div className="session-info">
-          <p className="session-label">Sesión activa</p>
-          <p className="session-email">{userEmail}</p>
+          <div className="session-avatar">{(userEmail?.[0] || 'U').toUpperCase()}</div>
+          <div className="session-text">
+            <p className="session-label">Sesión activa</p>
+            <p className="session-email">{userEmail}</p>
+          </div>
         </div>
         <button
           onClick={handleLogout}

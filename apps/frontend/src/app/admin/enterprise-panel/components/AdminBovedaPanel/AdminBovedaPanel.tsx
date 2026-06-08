@@ -6,6 +6,27 @@ import type { AdminDocumentMetadata } from './useAdminBoveda';
 import { adminBovedaPanelStyles } from './AdminBovedaPanel.styles';
 import { panelStyles } from '../EnterprisePanel/EnterprisePanel.styles';
 
+// ── Iconos de línea para ABP (reutilizables en todo el panel) ─────────────────────────
+const ABP_ICONS = {
+  shieldKey: (<><path d="M12 3 5 6v6c0 4.2 2.9 7.4 7 8.7 4.1-1.3 7-4.5 7-8.7V6z" />
+  <circle cx="12" cy="11" r="2" />
+  <path d="M12 13v3" /></>),
+  lock: (<><rect x="5" y="11" width="14" height="9" rx="2" />
+  <path d="M8 11V8a4 4 0 0 1 8 0v3" /></>),
+  key: (<><circle cx="8" cy="15" r="4" />
+  <path d="m10.8 12.2 7-7" />
+  <path d="m17 5 2.5 2.5" /><
+    path d="m14.5 7.5 2 2" /></>),
+};
+
+const ABPIcon = ({ n, w = 16, s = 2 }: { n: keyof typeof ABP_ICONS; w?: number; s?: number }) => (
+  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth={s} strokeLinecap="round" strokeLinejoin="round"
+    style={{ display: 'block', flexShrink: 0 }}>
+    {ABP_ICONS[n]}
+  </svg>
+);
+
 // ── Modal: restablecer clave (admin) ──────────────────────────────
 interface AdminResetKeyModalProps {
   isOpen:    boolean;
@@ -132,12 +153,18 @@ export default function AdminBovedaPanel() {
         error={resetError}
       />
 
-      <h2 className="section-title" style={{ marginBottom: 4 }}>
-        Gestion de Boveda — Administrador
-      </h2>
-      <p className="abp-desc">
-        Vista de todos los documentos cifrados del sistema. El administrador puede restablecer la clave de cualquier archivo.
-      </p>
+      <div className="abp-head">
+        <div className="abp-badge"><ABPIcon n="shieldKey" w={22} s={1.9} /></div>
+        <div>
+          <h2 className="abp-title">
+            Gestión de Bóveda
+            <span className="abp-pill">Administrador</span>
+          </h2>
+          <p className="abp-desc">
+            Vista de todos los documentos cifrados del sistema. El administrador puede restablecer la clave de cualquier archivo.
+          </p>
+        </div>
+      </div>
 
       {successMsg && <div className="abp-success-msg">{successMsg}</div>}
 
@@ -175,26 +202,30 @@ export default function AdminBovedaPanel() {
         ) : documents.length === 0 ? (
           <div className="abp-empty-box">No hay documentos en el sistema</div>
         ) : (
-          documents.map((doc) => (
+          documents.map((doc, idx) => (
             <div key={doc.id} className="item-row">
               <div className="item-left">
-                <div className="abp-doc-icon">D</div>
-                <div>
-                  <p className="file-name" title={doc.nombre_original}
-                    style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {doc.nombre_original}
-                  </p>
+                <div className={`abp-doc-icon ${idx % 2 === 0 ? 'av-1' : 'av-2'}`}>
+                  {(doc.user_email?.[0] || 'U').toUpperCase()}
+                </div>
+                <div style={{ minWidth: 0 }}>
+                  <div className="file-name-row">
+                    <p className="file-name" title={doc.nombre_original}
+                      style={{ maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {doc.nombre_original}
+                    </p>
+                    <span className="tag-cifrado"><ABPIcon n="lock" w={10} s={2.4} />Cifrado</span>
+                  </div>
                   <p className="file-meta">
-                    {formatFileSize(doc.tamano_bytes)} · {formatDate(doc.creado_en)}
+                    {formatFileSize(doc.tamano_bytes)} · {formatDate(doc.creado_en)} · <span className="abp-doc-owner">{doc.user_email}</span>
                   </p>
-                  <p className="abp-doc-user-email">{doc.user_email}</p>
                 </div>
               </div>
               <button
                 className="btn-ghost abp-btn-reset"
                 onClick={() => { setResetError(''); setResetTarget(doc); }}
               >
-                Restablecer clave
+                <ABPIcon n="key" w={14} />Restablecer clave
               </button>
             </div>
           ))
@@ -206,3 +237,4 @@ export default function AdminBovedaPanel() {
     </div>
   );
 }
+  
