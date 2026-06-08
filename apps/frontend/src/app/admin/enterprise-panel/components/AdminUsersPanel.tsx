@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { authApi, AdminUser, UserLevel, UserPermissions } from '@/services/authApi';
 import { panelStyles } from './EnterprisePanel/EnterprisePanel.styles';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Constantes ────────────────────────────────────────────────────────────────
 
 const LEVEL_LABELS: Record<UserLevel, string> = {
   admin_principal: 'Administrador Principal',
@@ -18,24 +18,50 @@ const LEVEL_OPTIONS: { value: UserLevel; label: string }[] = [
   { value: 'estandar',        label: 'Estándar' },
 ];
 
-function getInitials(email: string) {
-  const name = email.split('@')[0];
+const PERM_ITEMS: { key: keyof UserPermissions; label: string }[] = [
+  { key: 'create_users',   label: 'Crear usuarios' },
+  { key: 'view_audit',     label: 'Ver Auditoría Live' },
+  { key: 'manage_billing', label: 'Gestionar Facturación' },
+];
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', padding: '10px 14px',
+  borderRadius: 10, border: '1px solid var(--wf-line)',
+  backgroundColor: 'var(--wf-surface)', color: 'var(--wf-ink)',
+  fontSize: 13, outline: 'none', boxSizing: 'border-box',
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: 11, fontWeight: 700,
+  color: 'var(--wf-muted)', textTransform: 'uppercase',
+  letterSpacing: '0.05em', marginBottom: 6,
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getInitials(email: string, fullName?: string | null) {
+  if (fullName?.trim()) {
+    const parts = fullName.trim().split(/\s+/);
+    return parts.length >= 2
+      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+      : parts[0].slice(0, 2).toUpperCase();
+  }
+  const name  = email.split('@')[0];
   const parts = name.split(/[._-]/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return name.slice(0, 2).toUpperCase();
 }
 
-function getDisplayName(email: string) {
-  return email
-    .split('@')[0]
-    .split(/[._-]/)
+function getDisplayName(email: string, fullName?: string | null) {
+  if (fullName?.trim()) return fullName.trim();
+  return email.split('@')[0].split(/[._-]/)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(' ');
 }
 
 function getUserStatus(u: AdminUser): 'Activo' | 'Deshabilitado' | 'Pendiente MFA' {
-  if (u.banned) return 'Deshabilitado';
-  if (!u.mfa_enabled) return 'Pendiente MFA';
+  if (u.banned)        return 'Deshabilitado';
+  if (!u.mfa_enabled)  return 'Pendiente MFA';
   return 'Activo';
 }
 
@@ -43,7 +69,7 @@ function formatRutina(index: number) {
   return `000-${String(index + 1).padStart(2, '0')}`;
 }
 
-// ── Modal: Crear nuevo usuario ────────────────────────────────────────────────
+// ── Modal: Crear usuario ──────────────────────────────────────────────────────
 
 interface CreateModalProps {
   onClose:   () => void;
@@ -51,24 +77,25 @@ interface CreateModalProps {
 }
 
 function CreateModal({ onClose, onCreated }: CreateModalProps) {
-  const [email,       setEmail]       = useState('');
-  const [password,    setPassword]    = useState('');
-  const [showPass,    setShowPass]    = useState(false);
-  const [level,       setLevel]       = useState<UserLevel>('estandar');
-  const [perms,       setPerms]       = useState<UserPermissions>({ create_users: false, view_audit: false, manage_billing: false });
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
+  const [fullName, setFullName] = useState('');
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [level,    setLevel]    = useState<UserLevel>('estandar');
+  const [perms,    setPerms]    = useState<UserPermissions>({ create_users: false, view_audit: false, manage_billing: false });
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
 
   const togglePerm = (key: keyof UserPermissions) =>
     setPerms((p) => ({ ...p, [key]: !p[key] }));
 
   const handleSubmit = async () => {
-    if (!email.trim())    { setError('El email es requerido'); return; }
-    if (!password.trim()) { setError('La contraseña es requerida'); return; }
+    if (!email.trim())       { setError('El email es requerido'); return; }
+    if (!password.trim())    { setError('La contraseña es requerida'); return; }
     if (password.length < 8) { setError('La contraseña debe tener al menos 8 caracteres'); return; }
     setLoading(true); setError('');
     try {
-      const res = await authApi.adminInviteUser(email.trim(), password, level, perms);
+      const res = await authApi.adminInviteUser(email.trim(), password, level, perms, fullName.trim() || undefined);
       if (res.success) { onCreated(); onClose(); }
       else setError((res as any).message || 'Error al crear usuario');
     } catch { setError('Error de conexión'); }
@@ -83,8 +110,8 @@ function CreateModal({ onClose, onCreated }: CreateModalProps) {
       backdropFilter: 'blur(4px)',
     }}>
       <div style={{
-        backgroundColor: 'var(--wf-surface)',
-        borderRadius: 20, padding: 32, width: '100%', maxWidth: 440,
+        backgroundColor: 'var(--wf-surface)', borderRadius: 20,
+        padding: 32, width: '100%', maxWidth: 440,
         boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
         border: '1px solid var(--wf-line)',
       }}>
@@ -92,65 +119,50 @@ function CreateModal({ onClose, onCreated }: CreateModalProps) {
           <h3 style={{ color: 'var(--wf-ink)', fontSize: 17, fontWeight: 800, margin: 0, letterSpacing: '-0.4px' }}>
             Crear Nuevo Usuario
           </h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--wf-muted)', fontSize: 20, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--wf-muted)', fontSize: 20 }}>×</button>
         </div>
 
-        <label style={labelStyle}>Email Corporativo</label>
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="usuario@empresa.cl"
-          style={inputStyle}
-        />
+        <label style={labelStyle}>Nombre Completo</label>
+        <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+          placeholder="Ej: Juan Pérez" style={inputStyle} autoComplete="off" />
+
+        <label style={{ ...labelStyle, marginTop: 16 }}>Email Corporativo</label>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+          placeholder="usuario@empresa.cl" style={inputStyle} autoComplete="off" />
 
         <label style={{ ...labelStyle, marginTop: 16 }}>Contraseña Inicial</label>
         <div style={{ position: 'relative' }}>
           <input
             type={showPass ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            value={password} onChange={(e) => setPassword(e.target.value)}
             placeholder="Mínimo 8 caracteres"
             style={{ ...inputStyle, paddingRight: 44 }}
+            autoComplete="new-password"
           />
-          <button
-            type="button"
-            onClick={() => setShowPass((v) => !v)}
-            style={{
-              position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: 'var(--wf-muted)', fontSize: 14, lineHeight: 1, padding: 4,
-            }}
-          >
+          <button type="button" onClick={() => setShowPass((v) => !v)} style={{
+            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--wf-muted)', fontSize: 14, padding: 4,
+          }}>
             {showPass ? '🙈' : '👁'}
           </button>
         </div>
 
         <label style={{ ...labelStyle, marginTop: 16 }}>Nivel de Autoridad</label>
-        <select
-          value={level}
-          onChange={(e) => setLevel(e.target.value as UserLevel)}
-          style={inputStyle}
-        >
-          {LEVEL_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+        <select value={level} onChange={(e) => setLevel(e.target.value as UserLevel)} style={inputStyle}>
+          {LEVEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
 
         <label style={{ ...labelStyle, marginTop: 16 }}>Permisos de Gestión</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
           {PERM_ITEMS.map(({ key, label }) => (
             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-              <div
-                onClick={() => togglePerm(key)}
-                style={{
-                  width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer',
-                  backgroundColor: perms[key] ? 'var(--wf-primary)' : 'transparent',
-                  border: `2px solid ${perms[key] ? 'var(--wf-primary)' : 'var(--wf-line)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                }}
-              >
+              <div onClick={() => togglePerm(key)} style={{
+                width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer',
+                backgroundColor: perms[key] ? 'var(--wf-primary)' : 'transparent',
+                border: `2px solid ${perms[key] ? 'var(--wf-primary)' : 'var(--wf-line)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+              }}>
                 {perms[key] && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
               </div>
               <span style={{ color: 'var(--wf-ink-2)', fontSize: 13 }}>{label}</span>
@@ -162,16 +174,12 @@ function CreateModal({ onClose, onCreated }: CreateModalProps) {
 
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button className="btn-ghost" onClick={onClose} disabled={loading} style={{ flex: 1 }}>Cancelar</button>
-          <button
-            onClick={handleSubmit}
-            disabled={loading}
-            style={{
-              flex: 1, padding: '11px', borderRadius: 11, border: 'none',
-              backgroundColor: loading ? '#d1d5db' : 'var(--wf-primary)',
-              color: '#fff', fontWeight: 700, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
-            {loading ? 'Enviando...' : 'Enviar Invitación'}
+          <button onClick={handleSubmit} disabled={loading} style={{
+            flex: 1, padding: '11px', borderRadius: 11, border: 'none',
+            backgroundColor: loading ? '#d1d5db' : 'var(--wf-primary)',
+            color: '#fff', fontWeight: 700, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
+          }}>
+            {loading ? 'Creando...' : 'Crear Usuario'}
           </button>
         </div>
       </div>
@@ -198,8 +206,8 @@ function DeleteModal({ user, onConfirm, onCancel, loading, error }: DeleteModalP
       backdropFilter: 'blur(4px)',
     }}>
       <div style={{
-        backgroundColor: 'var(--wf-surface)',
-        borderRadius: 20, padding: 32, width: '100%', maxWidth: 400,
+        backgroundColor: 'var(--wf-surface)', borderRadius: 20,
+        padding: 32, width: '100%', maxWidth: 400,
         boxShadow: '0 25px 60px rgba(0,0,0,0.15)',
         border: '1px solid var(--wf-line)',
       }}>
@@ -209,30 +217,28 @@ function DeleteModal({ user, onConfirm, onCancel, loading, error }: DeleteModalP
         </p>
         <div style={{
           backgroundColor: 'var(--wf-surface-2)', borderRadius: 10,
-          padding: '10px 14px', marginBottom: 16, fontWeight: 600, fontSize: 14, color: 'var(--wf-ink)',
+          padding: '10px 14px', marginBottom: 16,
+          fontWeight: 600, fontSize: 14, color: 'var(--wf-ink)',
           border: '1px solid var(--wf-line)',
         }}>
           {user.email}
         </div>
         <div style={{
-          backgroundColor: 'var(--wf-danger-soft)', border: '1px solid oklch(0.58 0.20 22 / 0.25)',
+          backgroundColor: 'var(--wf-danger-soft)',
+          border: '1px solid oklch(0.58 0.20 22 / 0.25)',
           borderRadius: 10, padding: '10px 14px', marginBottom: 20,
           fontSize: 12, color: 'var(--wf-danger)', lineHeight: 1.5,
         }}>
-          Esta acción no se puede deshacer. El usuario perderá todo acceso de inmediato.
+          Esta acción es irreversible. El usuario perderá acceso inmediatamente.
         </div>
         {error && <p style={{ color: 'var(--wf-danger)', fontSize: 12, marginBottom: 12 }}>{error}</p>}
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-ghost" onClick={onCancel} disabled={loading} style={{ flex: 1 }}>Cancelar</button>
-          <button
-            onClick={onConfirm}
-            disabled={loading}
-            style={{
-              flex: 1, padding: '10px', borderRadius: 11, border: 'none',
-              backgroundColor: loading ? '#d1d5db' : 'var(--wf-danger)',
-              color: '#fff', fontWeight: 700, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
-            }}
-          >
+          <button onClick={onConfirm} disabled={loading} style={{
+            flex: 1, padding: '11px', borderRadius: 11, border: 'none',
+            backgroundColor: loading ? '#d1d5db' : 'var(--wf-danger)',
+            color: '#fff', fontWeight: 700, fontSize: 13, cursor: loading ? 'not-allowed' : 'pointer',
+          }}>
             {loading ? 'Eliminando...' : 'Eliminar'}
           </button>
         </div>
@@ -241,63 +247,32 @@ function DeleteModal({ user, onConfirm, onCancel, loading, error }: DeleteModalP
   );
 }
 
-// ── Constantes de permisos ────────────────────────────────────────────────────
-
-const PERM_ITEMS: { key: keyof UserPermissions; label: string }[] = [
-  { key: 'create_users',   label: 'Crear usuarios' },
-  { key: 'view_audit',     label: 'Ver Auditoría Live' },
-  { key: 'manage_billing', label: 'Gestionar Facturación' },
-];
-
-// ── Estilos inline reutilizables ──────────────────────────────────────────────
-
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  color: 'var(--wf-muted)',
-  fontSize: 10.5,
-  fontWeight: 700,
-  textTransform: 'uppercase',
-  letterSpacing: '0.8px',
-  marginBottom: 6,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '10px 14px',
-  borderRadius: 11,
-  border: '1px solid var(--wf-line)',
-  backgroundColor: 'var(--wf-surface-2)',
-  color: 'var(--wf-ink)',
-  fontSize: 13,
-  fontWeight: 500,
-  outline: 'none',
-  boxSizing: 'border-box',
-};
-
-// ── Panel derecho: Modificar Usuario ─────────────────────────────────────────
+// ── Panel de edición ──────────────────────────────────────────────────────────
 
 interface EditPanelProps {
-  user:        AdminUser;
-  onSaved:     () => void;
-  onDelete:    (user: AdminUser) => void;
-  isSelf:      boolean;
+  user:       AdminUser;
+  onSaved:    () => void;
+  onDelete:   (u: AdminUser) => void;
+  isSelf:     boolean;
   hideHeader?: boolean;
 }
 
 function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelProps) {
-  const [level,         setLevel]        = useState<UserLevel>(user.level ?? 'estandar');
-  const [perms,         setPerms]        = useState<UserPermissions>(user.permissions);
-  const [banned,        setBanned]       = useState(user.banned);
-  const [loading,       setLoading]      = useState(false);
-  const [error,         setError]        = useState('');
-  const [success,       setSuccess]      = useState('');
-  const [newPass,       setNewPass]      = useState('');
-  const [showNewPass,   setShowNewPass]  = useState(false);
-  const [resetLoading,  setResetLoading] = useState(false);
-  const [resetError,    setResetError]   = useState('');
-  const [resetSuccess,  setResetSuccess] = useState('');
+  const [fullName,     setFullName]     = useState(user.full_name ?? '');
+  const [level,        setLevel]        = useState<UserLevel>(user.level ?? 'estandar');
+  const [perms,        setPerms]        = useState<UserPermissions>(user.permissions);
+  const [banned,       setBanned]       = useState(user.banned);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
+  const [success,      setSuccess]      = useState('');
+  const [newPass,      setNewPass]      = useState('');
+  const [showNewPass,  setShowNewPass]  = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError,   setResetError]   = useState('');
+  const [resetSuccess, setResetSuccess] = useState('');
 
   useEffect(() => {
+    setFullName(user.full_name ?? '');
     setLevel(user.level ?? 'estandar');
     setPerms(user.permissions);
     setBanned(user.banned);
@@ -328,7 +303,7 @@ function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelPro
   const handleSave = async () => {
     setLoading(true); setError(''); setSuccess('');
     try {
-      const res = await authApi.adminUpdateUser(user.id, level, perms, banned);
+      const res = await authApi.adminUpdateUser(user.id, level, perms, banned, fullName.trim() || undefined);
       if (res.success) {
         setSuccess('Cambios guardados correctamente.');
         setTimeout(() => setSuccess(''), 3000);
@@ -344,15 +319,9 @@ function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelPro
     <div style={{
       backgroundColor: 'var(--wf-surface)',
       border: '1px solid var(--wf-line)',
-      borderRadius: 16,
-      padding: '24px 22px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 20,
-      position: 'sticky',
-      top: 0,
+      borderRadius: 16, padding: '24px 22px',
+      display: 'flex', flexDirection: 'column', gap: 20,
     }}>
-      {/* Header (oculto cuando el drawer ya lo muestra) */}
       {!hideHeader && (
         <div>
           <h3 style={{ color: 'var(--wf-ink)', fontSize: 15, fontWeight: 800, margin: '0 0 4px', letterSpacing: '-0.3px' }}>
@@ -364,47 +333,48 @@ function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelPro
 
       {isSelf && (
         <div style={{
-          backgroundColor: 'var(--wf-warn-soft)',
-          border: '1px solid oklch(0.74 0.12 78 / 0.4)',
+          backgroundColor: 'oklch(0.97 0.01 220)',
+          border: '1px solid oklch(0.80 0.05 220)',
           borderRadius: 10, padding: '10px 12px',
-          fontSize: 12, color: 'oklch(0.52 0.10 70)',
+          fontSize: 12, color: 'oklch(0.45 0.08 220)',
         }}>
-          No puedes modificar tu propio nivel de acceso.
+          Estás editando tu propio perfil de administrador.
         </div>
       )}
+
+      {/* Nombre */}
+      <div>
+        <label style={labelStyle}>Nombre Completo</label>
+        <input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Ej: Juan Pérez"
+          style={inputStyle}
+          autoComplete="off"
+        />
+      </div>
 
       {/* Nivel de Autoridad */}
       <div>
         <label style={labelStyle}>Nivel de Autoridad</label>
-        <select
-          value={level}
-          onChange={(e) => setLevel(e.target.value as UserLevel)}
-          disabled={isSelf}
-          style={{ ...inputStyle, cursor: isSelf ? 'not-allowed' : 'pointer', opacity: isSelf ? 0.6 : 1 }}
-        >
-          {LEVEL_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+        <select value={level} onChange={(e) => setLevel(e.target.value as UserLevel)} style={{ ...inputStyle, cursor: 'pointer' }}>
+          {LEVEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
       </div>
 
       {/* Permisos */}
       <div>
         <label style={labelStyle}>Permisos de Gestión</label>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 4 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 4 }}>
           {PERM_ITEMS.map(({ key, label }) => (
-            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: isSelf ? 'not-allowed' : 'pointer' }}>
-              <div
-                onClick={() => !isSelf && togglePerm(key)}
-                style={{
-                  width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: isSelf ? 'not-allowed' : 'pointer',
-                  backgroundColor: perms[key] ? 'var(--wf-primary)' : 'transparent',
-                  border: `2px solid ${perms[key] ? 'var(--wf-primary)' : 'var(--wf-line)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  transition: 'all 0.15s',
-                  opacity: isSelf ? 0.6 : 1,
-                }}
-              >
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+              <div onClick={() => togglePerm(key)} style={{
+                width: 18, height: 18, borderRadius: 5, flexShrink: 0, cursor: 'pointer',
+                backgroundColor: perms[key] ? 'var(--wf-primary)' : 'transparent',
+                border: `2px solid ${perms[key] ? 'var(--wf-primary)' : 'var(--wf-line)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.15s',
+              }}>
                 {perms[key] && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
               </div>
               <span style={{ color: 'var(--wf-ink-2)', fontSize: 13 }}>{label}</span>
@@ -413,97 +383,67 @@ function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelPro
         </div>
       </div>
 
-      {/* Estado de Cuenta */}
+      {/* Estado de cuenta */}
       <div>
         <label style={labelStyle}>Estado de Cuenta</label>
         <button
-          onClick={() => !isSelf && setBanned((b) => !b)}
-          disabled={isSelf}
+          onClick={() => setBanned((v) => !v)}
           style={{
-            width: '100%',
-            padding: '10px 14px',
-            borderRadius: 11,
-            border: 'none',
-            cursor: isSelf ? 'not-allowed' : 'pointer',
-            backgroundColor: banned ? 'oklch(0.58 0.20 22 / 0.12)' : 'var(--wf-safe-soft)',
+            width: '100%', padding: '10px 14px', borderRadius: 10,
+            border: `1px solid ${banned ? 'oklch(0.58 0.20 22 / 0.4)' : 'oklch(0.62 0.13 158 / 0.4)'}`,
+            backgroundColor: banned ? 'var(--wf-danger-soft)' : 'var(--wf-safe-soft)',
             color: banned ? 'var(--wf-danger)' : 'var(--wf-safe-strong)',
-            fontWeight: 700,
-            fontSize: 13,
-            transition: 'all 0.2s',
-            opacity: isSelf ? 0.6 : 1,
+            fontWeight: 700, fontSize: 13, cursor: 'pointer', textAlign: 'left',
           }}
         >
-          {banned ? '⊘ Deshabilitado — clic para activar' : '● Activo — clic para deshabilitar'}
+          {banned ? '● Deshabilitado — clic para activar' : '● Activo — clic para deshabilitar'}
         </button>
       </div>
 
       {/* Restablecer contraseña */}
-      {!isSelf && (
-        <div style={{
-          borderTop: '1px solid var(--wf-line)',
-          paddingTop: 18,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}>
-          <label style={labelStyle}>Restablecer Contraseña</label>
-          <div style={{ position: 'relative' }}>
-            <input
-              type={showNewPass ? 'text' : 'password'}
-              value={newPass}
-              onChange={(e) => setNewPass(e.target.value)}
-              placeholder="Nueva contraseña (mín. 8 caracteres)"
-              style={{ ...inputStyle, paddingRight: 44 }}
-            />
-            <button
-              type="button"
-              onClick={() => setShowNewPass((v) => !v)}
-              style={{
-                position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: 'var(--wf-muted)', fontSize: 14, lineHeight: 1, padding: 4,
-              }}
-            >
-              {showNewPass ? '🙈' : '👁'}
-            </button>
-          </div>
-          {resetError   && <p style={{ color: 'var(--wf-danger)',      fontSize: 12, margin: 0 }}>{resetError}</p>}
-          {resetSuccess && <p style={{ color: 'var(--wf-safe-strong)', fontSize: 12, margin: 0 }}>{resetSuccess}</p>}
-          <button
-            className="btn-ghost"
-            onClick={handleResetPassword}
-            disabled={resetLoading || !newPass}
-            style={{ width: '100%', justifyContent: 'center', opacity: !newPass ? 0.5 : 1 }}
-          >
-            {resetLoading ? 'Restableciendo...' : 'Restablecer Contraseña'}
+      <div>
+        <label style={labelStyle}>Restablecer Contraseña</label>
+        <div style={{ position: 'relative' }}>
+          <input
+            type={showNewPass ? 'text' : 'password'}
+            value={newPass} onChange={(e) => setNewPass(e.target.value)}
+            placeholder="Nueva contraseña (mín. 8 caracteres)"
+            style={{ ...inputStyle, paddingRight: 44 }}
+            autoComplete="new-password"
+          />
+          <button type="button" onClick={() => setShowNewPass((v) => !v)} style={{
+            position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--wf-muted)', fontSize: 14, padding: 4,
+          }}>
+            {showNewPass ? '🙈' : '👁'}
           </button>
         </div>
-      )}
+        {resetError   && <p style={{ color: 'var(--wf-danger)',      fontSize: 12, margin: '6px 0 0' }}>{resetError}</p>}
+        {resetSuccess && <p style={{ color: 'var(--wf-safe-strong)', fontSize: 12, margin: '6px 0 0' }}>{resetSuccess}</p>}
+        <button className="btn-ghost" onClick={handleResetPassword}
+          disabled={resetLoading || !newPass}
+          style={{ width: '100%', justifyContent: 'center', marginTop: 8, opacity: !newPass ? 0.5 : 1 }}>
+          {resetLoading ? 'Restableciendo...' : 'Restablecer Contraseña'}
+        </button>
+      </div>
 
       {/* Feedback guardar */}
-      {error   && <p style={{ color: 'var(--wf-danger)', fontSize: 12, margin: 0 }}>{error}</p>}
+      {error   && <p style={{ color: 'var(--wf-danger)',      fontSize: 12, margin: 0 }}>{error}</p>}
       {success && <p style={{ color: 'var(--wf-safe-strong)', fontSize: 12, margin: 0 }}>{success}</p>}
 
-      {/* Acciones */}
-      <button
-        className="btn-primary"
-        onClick={handleSave}
-        disabled={loading || isSelf}
-        style={{ width: '100%', justifyContent: 'center', opacity: isSelf ? 0.5 : 1 }}
-      >
+      <button className="btn-primary" onClick={handleSave} disabled={loading}
+        style={{ width: '100%', justifyContent: 'center' }}>
         {loading ? 'Guardando...' : 'Guardar Cambios'}
       </button>
 
       {!isSelf && (
-        <button
-          onClick={() => onDelete(user)}
-          style={{
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--wf-danger)', fontSize: 13, fontWeight: 700,
-            textAlign: 'center', padding: '4px 0',
-            textDecoration: 'underline', textUnderlineOffset: 3,
-          }}
-        >
+        <button onClick={() => onDelete(user)} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          color: 'var(--wf-danger)', fontSize: 13, fontWeight: 700,
+          textAlign: 'center', padding: '4px 0',
+          textDecoration: 'underline', textUnderlineOffset: 3,
+        }}>
           Eliminar Acceso
         </button>
       )}
@@ -521,26 +461,22 @@ interface UserRowProps {
 }
 
 function UserRow({ user, index, selected, onClick }: UserRowProps) {
-  const status  = getUserStatus(user);
-  const name    = getDisplayName(user.email);
-  const initials = getInitials(user.email);
+  const status   = getUserStatus(user);
+  const name     = getDisplayName(user.email, user.full_name);
+  const initials = getInitials(user.email, user.full_name);
 
   const statusColor = status === 'Activo'
-    ? { bg: 'var(--wf-safe-soft)', color: 'var(--wf-safe-strong)' }
+    ? { bg: 'var(--wf-safe-soft)',  color: 'var(--wf-safe-strong)' }
     : status === 'Deshabilitado'
     ? { bg: 'var(--wf-danger-soft)', color: 'var(--wf-danger)' }
-    : { bg: 'var(--wf-warn-soft)', color: 'oklch(0.52 0.10 70)' };
+    : { bg: 'var(--wf-warn-soft)',   color: 'oklch(0.52 0.10 70)' };
 
   return (
-    <tr
-      onClick={onClick}
-      style={{
-        cursor: 'pointer',
-        backgroundColor: selected ? 'var(--wf-primary-soft)' : 'transparent',
-        transition: 'background 0.12s',
-      }}
-    >
-      {/* Avatar + nombre */}
+    <tr onClick={onClick} style={{
+      cursor: 'pointer',
+      backgroundColor: selected ? 'var(--wf-primary-soft)' : 'transparent',
+      transition: 'background 0.12s',
+    }}>
       <td style={{ padding: '13px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="avatar" style={{ fontSize: 12, width: 36, height: 36, borderRadius: 10, flexShrink: 0 }}>
@@ -552,21 +488,18 @@ function UserRow({ user, index, selected, onClick }: UserRowProps) {
           </div>
         </div>
       </td>
-      {/* Rutina */}
       <td style={{ padding: '13px 12px', color: 'var(--wf-faint)', fontSize: 12, fontFamily: 'var(--wf-mono)', whiteSpace: 'nowrap' }}>
         {formatRutina(index)}
       </td>
-      {/* Papel / Nivel */}
       <td style={{ padding: '13px 12px' }}>
         <span className={`chip ${user.is_admin ? 'blue' : ''}`} style={{ whiteSpace: 'nowrap' }}>
           {LEVEL_LABELS[user.level] ?? 'Estándar'}
         </span>
       </td>
-      {/* Permiso creación */}
-      <td style={{ padding: '13px 12px', fontSize: 12, color: user.permissions.create_users ? 'var(--wf-safe-strong)' : 'var(--wf-faint)', fontWeight: 600 }}>
-        {user.permissions.create_users ? 'Sí' : 'No'}
+      <td style={{ padding: '13px 12px', fontSize: 12, fontWeight: 600,
+        color: user.permissions?.create_users ? 'var(--wf-safe-strong)' : 'var(--wf-faint)' }}>
+        {user.permissions?.create_users ? 'Sí' : 'No'}
       </td>
-      {/* Estado */}
       <td style={{ padding: '13px 12px' }}>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 5,
@@ -623,16 +556,11 @@ export default function AdminUsersPanel() {
     const q = search.toLowerCase();
     return users.filter((u) =>
       u.email.toLowerCase().includes(q) ||
-      getDisplayName(u.email).toLowerCase().includes(q) ||
-      LEVEL_LABELS[u.level].toLowerCase().includes(q)
+      getDisplayName(u.email, u.full_name).toLowerCase().includes(q) ||
+      (LEVEL_LABELS[u.level] ?? '').toLowerCase().includes(q)
     );
   }, [users, search]);
 
-  const handleSearchChange = (value: string) => {
-    setSearch(value);
-  };
-
-  // Tras guardar, solo refrescar — `selected` se actualiza automáticamente porque deriva de `users`
   const handleSaved = useCallback(() => {
     fetchUsers();
     setSuccessMsg('Cambios guardados.');
@@ -664,11 +592,14 @@ export default function AdminUsersPanel() {
 
   return (
     <div>
-      {/* Modales */}
       {showCreate && (
         <CreateModal
           onClose={() => setShowCreate(false)}
-          onCreated={() => { fetchUsers(); setSuccessMsg('Invitación enviada correctamente.'); setTimeout(() => setSuccessMsg(''), 4000); }}
+          onCreated={() => {
+            fetchUsers();
+            setSuccessMsg('Usuario creado correctamente.');
+            setTimeout(() => setSuccessMsg(''), 4000);
+          }}
         />
       )}
       {deleteTarget && (
@@ -694,7 +625,6 @@ export default function AdminUsersPanel() {
         </button>
       </div>
 
-      {/* Mensajes globales */}
       {successMsg && (
         <div style={{
           backgroundColor: 'var(--wf-safe-soft)', border: '1px solid oklch(0.62 0.13 158 / 0.35)',
@@ -716,7 +646,7 @@ export default function AdminUsersPanel() {
 
       {/* Buscador */}
       <div style={{ position: 'relative', marginBottom: 20 }}>
-        {/* Input trampa: absorbe el autofill del browser antes que llegue al buscador real */}
+        {/* Input trampa: absorbe el autofill del browser */}
         <input type="text" aria-hidden="true" tabIndex={-1} readOnly
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0, padding: 0, border: 0 }} />
         <span style={{
@@ -726,19 +656,15 @@ export default function AdminUsersPanel() {
         <input
           type="text"
           value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
+          onChange={(e) => setSearch(e.target.value)}
           placeholder="Buscar por nombre o rol..."
           autoComplete="new-password"
           spellCheck={false}
-          style={{
-            ...inputStyle,
-            paddingLeft: 40,
-            boxShadow: 'var(--wf-shadow-sm)',
-          }}
+          style={{ ...inputStyle, paddingLeft: 40, boxShadow: 'var(--wf-shadow-sm)' }}
         />
       </div>
 
-      {/* Tabla — ancho completo siempre */}
+      {/* Tabla */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '48px 0', color: 'var(--wf-muted)' }}>
@@ -754,7 +680,7 @@ export default function AdminUsersPanel() {
               <tr>
                 <th style={{ paddingLeft: 20 }}>Nombre</th>
                 <th>Rutina</th>
-                <th>Papel</th>
+                <th>Rol</th>
                 <th>Perm. Creación</th>
                 <th>Estado</th>
               </tr>
@@ -774,19 +700,16 @@ export default function AdminUsersPanel() {
         )}
       </div>
 
-      {/* Drawer lateral — overlay fijo, no afecta el layout de la tabla */}
+      {/* Drawer lateral */}
       {selected && (
         <>
-          {/* Backdrop solo visual — pointer-events:none para no bloquear clicks en la tabla */}
-          <div
-            style={{
-              position: 'fixed', inset: 0, zIndex: 200,
-              backgroundColor: 'rgba(0,0,0,0.18)',
-              backdropFilter: 'blur(2px)',
-              pointerEvents: 'none',
-            }}
-          />
-          {/* Panel */}
+          {/* Backdrop solo visual — no bloquea clicks en la tabla */}
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 200,
+            backgroundColor: 'rgba(0,0,0,0.18)',
+            backdropFilter: 'blur(2px)',
+            pointerEvents: 'none',
+          }} />
           <div style={{
             position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 201,
             width: 360,
@@ -795,15 +718,12 @@ export default function AdminUsersPanel() {
             boxShadow: '-8px 0 32px rgba(0,0,0,0.10)',
             overflowY: 'auto',
             padding: '28px 24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20,
+            display: 'flex', flexDirection: 'column', gap: 20,
           }}>
-            {/* Botón cerrar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ color: 'var(--wf-ink)', fontSize: 15, fontWeight: 800, margin: '0 0 2px', letterSpacing: '-0.3px' }}>
-                  Modificar Usuario
+                  {getDisplayName(selected.email, selected.full_name)}
                 </h3>
                 <p style={{ color: 'var(--wf-muted)', fontSize: 12, margin: 0 }}>{selected.email}</p>
               </div>
@@ -811,14 +731,12 @@ export default function AdminUsersPanel() {
                 onClick={() => setSelectedId(null)}
                 style={{
                   background: 'none', border: '1px solid var(--wf-line)', cursor: 'pointer',
-                  color: 'var(--wf-muted)', fontSize: 18, lineHeight: 1, padding: '4px 9px',
-                  borderRadius: 8,
+                  color: 'var(--wf-muted)', fontSize: 18, lineHeight: 1, padding: '4px 9px', borderRadius: 8,
                 }}
               >
                 ×
               </button>
             </div>
-            {/* key={selectedId} fuerza desmontaje/remontaje al cambiar de usuario */}
             <EditPanel
               key={selectedId}
               user={selected}
