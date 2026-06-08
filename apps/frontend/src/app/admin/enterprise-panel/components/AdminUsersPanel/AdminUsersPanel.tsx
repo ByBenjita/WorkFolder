@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { authApi, AdminUser, UserLevel, UserPermissions } from '@/services/authApi';
-import { panelStyles } from './EnterprisePanel/EnterprisePanel.styles';
+import { useAdminUsersPanel } from './useAdminUsersPanel';
+import { adminUsersPanelStyles } from './AdminUsersPanel.styles';
+import { panelStyles } from '../EnterprisePanel/EnterprisePanel.styles';
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
@@ -250,10 +252,10 @@ function DeleteModal({ user, onConfirm, onCancel, loading, error }: DeleteModalP
 // ── Panel de edición ──────────────────────────────────────────────────────────
 
 interface EditPanelProps {
-  user:       AdminUser;
-  onSaved:    () => void;
-  onDelete:   (u: AdminUser) => void;
-  isSelf:     boolean;
+  user:        AdminUser;
+  onSaved:     () => void;
+  onDelete:    (u: AdminUser) => void;
+  isSelf:      boolean;
   hideHeader?: boolean;
 }
 
@@ -428,7 +430,6 @@ function EditPanel({ user, onSaved, onDelete, isSelf, hideHeader }: EditPanelPro
         </button>
       </div>
 
-      {/* Feedback guardar */}
       {error   && <p style={{ color: 'var(--wf-danger)',      fontSize: 12, margin: 0 }}>{error}</p>}
       {success && <p style={{ color: 'var(--wf-safe-strong)', fontSize: 12, margin: 0 }}>{success}</p>}
 
@@ -516,41 +517,17 @@ function UserRow({ user, index, selected, onClick }: UserRowProps) {
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function AdminUsersPanel() {
-  const [users,         setUsers]         = useState<AdminUser[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [error,         setError]         = useState<string | null>(null);
-  const [search,        setSearch]        = useState('');
-  const [selectedId,    setSelectedId]    = useState<string | null>(null);
-  const [showCreate,    setShowCreate]    = useState(false);
-  const [deleteTarget,  setDeleteTarget]  = useState<AdminUser | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError,   setDeleteError]   = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [successMsg,    setSuccessMsg]    = useState('');
-
-  const selected = users.find((u) => u.id === selectedId) ?? null;
-
-  const fetchUsers = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const [usersRes, sessionRes] = await Promise.all([
-        authApi.adminListUsers(),
-        authApi.getSession(),
-      ]);
-      if (usersRes.success) {
-        setUsers(usersRes.users);
-        if (sessionRes.success) setCurrentUserId(sessionRes.user.id);
-      } else {
-        setError((usersRes as any).message || 'Error al cargar usuarios');
-      }
-    } catch {
-      setError('Error de conexión al cargar usuarios');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  const {
+    users, loading, error,
+    search, setSearch,
+    selectedId, setSelectedId,
+    showCreate, setShowCreate,
+    deleteTarget, setDeleteTarget,
+    deleteLoading, deleteError, setDeleteError,
+    currentUserId, successMsg,
+    selected, activeCount,
+    fetchUsers, handleSaved, handleDeleteConfirm,
+  } = useAdminUsersPanel();
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -561,35 +538,6 @@ export default function AdminUsersPanel() {
     );
   }, [users, search]);
 
-  const handleSaved = useCallback(() => {
-    fetchUsers();
-    setSuccessMsg('Cambios guardados.');
-    setTimeout(() => setSuccessMsg(''), 3000);
-  }, [fetchUsers]);
-
-  const handleDeleteConfirm = async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true); setDeleteError('');
-    try {
-      const res = await authApi.adminDeleteUser(deleteTarget.id);
-      if (res.success) {
-        setDeleteTarget(null);
-        if (selectedId === deleteTarget.id) setSelectedId(null);
-        setSuccessMsg(`${deleteTarget.email} eliminado correctamente.`);
-        setTimeout(() => setSuccessMsg(''), 4000);
-        fetchUsers();
-      } else {
-        setDeleteError((res as any).message || 'Error al eliminar');
-      }
-    } catch {
-      setDeleteError('Error de conexión');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
-
-  const activeCount = users.filter((u) => !u.banned).length;
-
   return (
     <div>
       {showCreate && (
@@ -597,8 +545,7 @@ export default function AdminUsersPanel() {
           onClose={() => setShowCreate(false)}
           onCreated={() => {
             fetchUsers();
-            setSuccessMsg('Usuario creado correctamente.');
-            setTimeout(() => setSuccessMsg(''), 4000);
+            setDeleteError('');
           }}
         />
       )}
@@ -646,7 +593,6 @@ export default function AdminUsersPanel() {
 
       {/* Buscador */}
       <div style={{ position: 'relative', marginBottom: 20 }}>
-        {/* Input trampa: absorbe el autofill del browser */}
         <input type="text" aria-hidden="true" tabIndex={-1} readOnly
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0, padding: 0, border: 0 }} />
         <span style={{
@@ -703,23 +649,8 @@ export default function AdminUsersPanel() {
       {/* Drawer lateral */}
       {selected && (
         <>
-          {/* Backdrop solo visual — no bloquea clicks en la tabla */}
-          <div style={{
-            position: 'fixed', inset: 0, zIndex: 200,
-            backgroundColor: 'rgba(0,0,0,0.18)',
-            backdropFilter: 'blur(2px)',
-            pointerEvents: 'none',
-          }} />
-          <div style={{
-            position: 'fixed', top: 0, right: 0, bottom: 0, zIndex: 201,
-            width: 360,
-            backgroundColor: 'var(--wf-surface)',
-            borderLeft: '1px solid var(--wf-line)',
-            boxShadow: '-8px 0 32px rgba(0,0,0,0.10)',
-            overflowY: 'auto',
-            padding: '28px 24px',
-            display: 'flex', flexDirection: 'column', gap: 20,
-          }}>
+          <div className="aup-backdrop" />
+          <div className="aup-drawer">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h3 style={{ color: 'var(--wf-ink)', fontSize: 15, fontWeight: 800, margin: '0 0 2px', letterSpacing: '-0.3px' }}>
@@ -749,6 +680,7 @@ export default function AdminUsersPanel() {
         </>
       )}
 
+      <style jsx global>{adminUsersPanelStyles}</style>
       <style jsx global>{panelStyles}</style>
     </div>
   );
