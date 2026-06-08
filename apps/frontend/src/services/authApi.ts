@@ -34,12 +34,24 @@ export interface SessionResponse {
   aal:     { current: string; next: string; mfa_complete: boolean };
 }
 
+export interface UserPermissions {
+  create_users:    boolean;
+  view_audit:      boolean;
+  manage_billing:  boolean;
+}
+
+export type UserLevel = 'admin_principal' | 'admin_delegado' | 'estandar';
+
 export interface AdminUser {
-  id:         string;
-  email:      string;
-  role:       string;
-  is_admin:   boolean;
-  created_at: string;
+  id:          string;
+  email:       string;
+  role:        string;
+  is_admin:    boolean;
+  level:       UserLevel;
+  permissions: UserPermissions;
+  banned:      boolean;
+  mfa_enabled: boolean;
+  created_at:  string;
 }
 
 // ── Token en sessionStorage ──────────────────────────────────────
@@ -101,6 +113,13 @@ export const authApi = {
   mfaVerify:         (factorId: string, code: string) =>
                        post<MFAVerifyResponse>('/mfa/verify', { factor_id: factorId, code }),
   getVerifiedFactor: () => get<FactorResponse>('/mfa/factor'),
-  adminListUsers:    () => get<{ success: boolean; users: AdminUser[] }>('/admin/users'),
-  adminPromoteUser:  (userId: string) => post<{ success: boolean; message: string }>('/admin/promote', { userId }),
+  adminListUsers:   () => get<{ success: boolean; users: AdminUser[] }>('/admin/users'),
+  adminPromoteUser: (userId: string) => post<{ success: boolean; message: string }>('/admin/promote', { userId }),
+  adminDeleteUser:  (userId: string) => post<{ success: boolean; message: string }>('/admin/delete', { userId }),
+  adminInviteUser:  (email: string, password: string, level: UserLevel, permissions: UserPermissions) =>
+                      post<{ success: boolean; message: string }>('/admin/invite', { email, password, level, permissions }),
+  adminUpdateUser:       (userId: string, level: UserLevel, permissions: UserPermissions, banned: boolean) =>
+                           post<{ success: boolean; message: string }>('/admin/update', { userId, level, permissions, banned }),
+  adminResetPassword:    (userId: string, newPassword: string) =>
+                           post<{ success: boolean; message: string }>('/admin/reset-password', { userId, newPassword }),
 };

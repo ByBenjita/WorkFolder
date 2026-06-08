@@ -27,10 +27,14 @@ export async function GET(req: NextRequest) {
     if (listError) return err('Error al obtener usuarios: ' + listError.message, 500);
 
     const result = users.map((u) => ({
-      id:         u.id,
-      email:      u.email ?? '',
-      is_admin:   u.app_metadata?.role === 'admin',
-      created_at: u.created_at,
+      id:          u.id,
+      email:       u.email ?? '',
+      is_admin:    u.app_metadata?.role === 'admin',
+      level:       u.app_metadata?.level ?? 'estandar',
+      permissions: u.app_metadata?.permissions ?? { create_users: false, view_audit: false, manage_billing: false },
+      banned:      u.banned_until != null && new Date(u.banned_until) > new Date(),
+      mfa_enabled: Array.isArray(u.factors) && u.factors.length > 0,
+      created_at:  u.created_at,
     }));
 
     return ok({ users: result });
