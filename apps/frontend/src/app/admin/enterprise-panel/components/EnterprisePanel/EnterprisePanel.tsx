@@ -8,7 +8,6 @@ import {
   MOCK_LOGS,
   SECURITY_CHECKS,
   INVOICES,
-  RRHH_RECEPTORS,
 } from './useEnterprisePanel';
 
 import BovedaPanel      from '../../../../components/boveda/BovedaPanel';
