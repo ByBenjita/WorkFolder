@@ -12,7 +12,7 @@ import {
 
 import BovedaPanel      from '../../../../components/boveda/BovedaPanel';
 import AdminBovedaPanel from '../AdminBovedaPanel/AdminBovedaPanel';
-import AdminUsersPanel  from '../AdminUsersPanel';
+import AdminUsersPanel  from '../AdminUsersPanel/AdminUsersPanel';
 import RRHHPanel        from '../RRHHPanel/RRHHPanel';
 
 interface Props {
