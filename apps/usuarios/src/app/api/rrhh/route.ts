@@ -4,10 +4,13 @@ import { corsHeaders, OPTIONS as corsOptions } from '@/lib/response';
 
 export { corsOptions as OPTIONS };
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Lazy init: se crea solo al primer request, no durante el build de Next.js
+function getSupabase() {
+  return createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
 
 function jsonErr(message: string, status: number) {
   return NextResponse.json({ success: false, error: message }, { status, headers: corsHeaders });
@@ -20,12 +23,14 @@ function jsonOk(data: object, status = 200) {
 async function getUser(req: NextRequest) {
   const token = req.headers.get('authorization')?.replace('Bearer ', '');
   if (!token) return null;
-  const { data } = await supabase.auth.getUser(token);
+  const sb = getSupabase();
+  const { data } = await sb.auth.getUser(token);
   return data.user ?? null;
 }
 
 async function checkAdmin(userId: string): Promise<boolean> {
-  const { data } = await supabase.auth.admin.getUserById(userId);
+  const sb = getSupabase();
+  const { data } = await sb.auth.admin.getUserById(userId);
   return data.user?.app_metadata?.role === 'admin';
 }
 
@@ -34,9 +39,10 @@ export async function GET(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return jsonErr('No autorizado', 401);
 
+  const sb    = getSupabase();
   const admin = await checkAdmin(user.id);
 
-  let query = supabase
+  let query = sb
     .from('rrhh_documentos')
     .select('*')
     .order('creado_en', { ascending: false });
@@ -65,7 +71,9 @@ export async function PATCH(req: NextRequest) {
   const { id } = body;
   if (!id) return jsonErr('Falta el id del documento', 400);
 
-  const { data: doc } = await supabase
+  const sb = getSupabase();
+
+  const { data: doc } = await sb
     .from('rrhh_documentos')
     .select('id, asignado_a, estado')
     .eq('id', id)
@@ -85,13 +93,13 @@ export async function PATCH(req: NextRequest) {
   const ahora = new Date().toISOString();
 
   const [{ error: firmaError }, { error: updateError }] = await Promise.all([
-    supabase.from('rrhh_firmas').insert({
+    sb.from('rrhh_firmas').insert({
       rrhh_documento_id: id,
       firmado_por:       user.id,
       firmado_por_email: user.email ?? '',
       firmado_en:        ahora,
     }),
-    supabase.from('rrhh_documentos').update({
+    sb.from('rrhh_documentos').update({
       estado:     'firmado',
       firmado_en: ahora,
     }).eq('id', id),
