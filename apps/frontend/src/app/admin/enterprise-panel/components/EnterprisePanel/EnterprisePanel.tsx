@@ -196,7 +196,7 @@ const SECTION_MAP: Record<AdminSection, React.ReactNode> = {
   home:        <HomeSection />,
   usuarios:    <UsuariosSection />,
   rrhh:        <RRHHSection />,
-  boveda:      <BovedaSection />,          
+  boveda:      <BovedaSection/>,
   seguridad:   <SeguridadSection />,
   auditoria:   <AuditoriaSection />,
   facturacion: <FacturacionSection />,
