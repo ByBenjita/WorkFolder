@@ -5,7 +5,7 @@ import type { AdminSection } from '../../types';
 import { panelStyles } from './EnterprisePanel.styles';
 import {
   useHomeSection,
-  MOCK_LOGS,
+  MOCK_LOGS,****
   SECURITY_CHECKS,
   INVOICES,
 } from './useEnterprisePanel';
@@ -196,7 +196,7 @@ const SECTION_MAP: Record<AdminSection, React.ReactNode> = {
   home:        <HomeSection />,
   usuarios:    <UsuariosSection />,
   rrhh:        <RRHHSection />,
-  boveda:      <BovedaSection />,
+  boveda:      <BovedaSection />,          
   seguridad:   <SeguridadSection />,
   auditoria:   <AuditoriaSection />,
   facturacion: <FacturacionSection />,
