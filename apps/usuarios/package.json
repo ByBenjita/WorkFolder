@@ -6,7 +6,9 @@
     "dev": "next dev --port 3001",
     "build": "next build",
     "start": "next start --port 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:ui": "vitest --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
@@ -20,6 +22,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/swagger-ui-react": "^5.18.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.8"
   }
 }
