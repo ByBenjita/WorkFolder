@@ -45,6 +45,7 @@ export type UserLevel = 'admin_principal' | 'admin_delegado' | 'estandar';
 export interface AdminUser {
   id:          string;
   email:       string;
+  full_name:   string | null;
   role:        string;
   is_admin:    boolean;
   level:       UserLevel;

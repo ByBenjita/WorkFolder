@@ -14,6 +14,7 @@ import {
 import BovedaPanel      from '../../../../components/boveda/BovedaPanel';
 import AdminBovedaPanel from '../AdminBovedaPanel/AdminBovedaPanel';
 import AdminUsersPanel  from '../AdminUsersPanel';
+import RRHHPanel        from '../RRHHPanel/RRHHPanel';
 
 interface Props {
   section: AdminSection;
@@ -188,34 +189,7 @@ function FacturacionSection() {
 
 // ── Sección RRHH ─────────────────────────────────────────────────
 function RRHHSection() {
-  return (
-    <div>
-      <SectionTitle>Módulo RRHH (Beta)</SectionTitle>
-      <div className="stats-row">
-        <Stat label="Receptores Activos" value="3/3"   sub="Cupo completo"      accent />
-        <Stat label="GB Asignados"       value="16 GB" sub="5 GB por receptor" />
-        <Stat label="Documentos"         value="284"   sub="Nóminas y contratos" />
-      </div>
-      <Card>
-        <div className="card-header">
-          <h3 className="card-title">Receptores RRHH</h3>
-          <button className="btn-primary">+ Agregar Receptor (US$4)</button>
-        </div>
-        {RRHH_RECEPTORS.map((r, i) => (
-          <div key={i} className="item-row">
-            <div className="item-left">
-              <div className="avatar">{r.name[0]}</div>
-              <div>
-                <p className="receptor-name">{r.name}</p>
-                <p className="receptor-meta">Receptor RRHH · 5 GB asignados</p>
-              </div>
-            </div>
-            <span className="chip green">Activo</span>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
+  return <RRHHPanel />;
 }
 
 // ── Mapa de secciones (ACTUALIZADO) ──────────────────────────────
