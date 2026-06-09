@@ -4,7 +4,6 @@ import { ok, err, OPTIONS } from '@/lib/response';
 
 export { OPTIONS };
 
-// ── Listar todos los usuarios (solo admin) ────────────────────────
 export async function GET(req: NextRequest) {
   try {
     const authHeader = req.headers.get('Authorization') ?? '';
@@ -18,10 +17,7 @@ export async function GET(req: NextRequest) {
 
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !user) return err('No autorizado', 401);
-
-    if (user.app_metadata?.role !== 'admin') {
-      return err('Permisos insuficientes', 403);
-    }
+    if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
 
     const { data: { users }, error: listError } = await serviceClient.auth.admin.listUsers();
     if (listError) return err('Error al obtener usuarios: ' + listError.message, 500);
@@ -29,11 +25,14 @@ export async function GET(req: NextRequest) {
     const result = users.map((u) => ({
       id:          u.id,
       email:       u.email ?? '',
+      full_name:   u.user_metadata?.full_name ?? null,
       is_admin:    u.app_metadata?.role === 'admin',
-      level:       u.app_metadata?.level ?? 'estandar',
+      level:       u.app_metadata?.level ?? (u.app_metadata?.role === 'admin' ? 'admin_principal' : 'estandar'),
       permissions: u.app_metadata?.permissions ?? { create_users: false, view_audit: false, manage_billing: false },
       banned:      u.banned_until != null && new Date(u.banned_until) > new Date(),
-      mfa_enabled: Array.isArray(u.factors) && u.factors.length > 0,
+      mfa_enabled: !Array.isArray(u.factors) || u.factors.length === 0
+        ? true
+        : u.factors.some((f: any) => f.status === 'verified'),
       created_at:  u.created_at,
     }));
 
