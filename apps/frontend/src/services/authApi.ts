@@ -35,9 +35,9 @@ export interface SessionResponse {
 }
 
 export interface UserPermissions {
-  create_users:    boolean;
-  view_audit:      boolean;
-  manage_billing:  boolean;
+  create_users:   boolean;
+  view_audit:     boolean;
+  manage_billing: boolean;
 }
 
 export type UserLevel = 'admin_principal' | 'admin_delegado' | 'estandar';
@@ -114,13 +114,18 @@ export const authApi = {
   mfaVerify:         (factorId: string, code: string) =>
                        post<MFAVerifyResponse>('/mfa/verify', { factor_id: factorId, code }),
   getVerifiedFactor: () => get<FactorResponse>('/mfa/factor'),
-  adminListUsers:   () => get<{ success: boolean; users: AdminUser[] }>('/admin/users'),
-  adminPromoteUser: (userId: string) => post<{ success: boolean; message: string }>('/admin/promote', { userId }),
-  adminDeleteUser:  (userId: string) => post<{ success: boolean; message: string }>('/admin/delete', { userId }),
-  adminInviteUser:  (email: string, password: string, level: UserLevel, permissions: UserPermissions) =>
-                      post<{ success: boolean; message: string }>('/admin/invite', { email, password, level, permissions }),
-  adminUpdateUser:       (userId: string, level: UserLevel, permissions: UserPermissions, banned: boolean) =>
-                           post<{ success: boolean; message: string }>('/admin/update', { userId, level, permissions, banned }),
-  adminResetPassword:    (userId: string, newPassword: string) =>
-                           post<{ success: boolean; message: string }>('/admin/reset-password', { userId, newPassword }),
+  adminListUsers:    () => get<{ success: boolean; users: AdminUser[] }>('/admin/users'),
+  adminPromoteUser:  (userId: string) => post<{ success: boolean; message: string }>('/admin/promote', { userId }),
+
+  adminDeleteUser: (userId: string) =>
+    post<{ success: boolean; message: string }>('/admin/delete', { userId }),
+
+  adminInviteUser: (email: string, password: string, level: UserLevel, permissions: UserPermissions, fullName?: string) =>
+    post<{ success: boolean; message: string }>('/admin/invite', { email, password, level, permissions, fullName }),
+
+  adminUpdateUser: (userId: string, level: UserLevel, permissions: UserPermissions, banned: boolean, fullName?: string) =>
+    post<{ success: boolean; message: string }>('/admin/update', { userId, level, permissions, banned, fullName }),
+
+  adminResetPassword: (userId: string, newPassword: string) =>
+    post<{ success: boolean; message: string }>('/admin/reset-password', { userId, newPassword }),
 };
