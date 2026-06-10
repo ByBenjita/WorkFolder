@@ -10,13 +10,13 @@ import type { AdminSection } from './types';
 export default function EnterprisePanelPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>('home');
   const [userEmail, setUserEmail]         = useState('');
+  const [isAdmin, setIsAdmin]             = useState(false);
   const [loading, setLoading]             = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Si no hay token en sessionStorage → al login
         const token = getAccessToken();
         if (!token) {
           router.push('/login');
@@ -30,8 +30,10 @@ export default function EnterprisePanelPage() {
           return;
         }
 
-        // El token existe y la sesión es válida → permitir acceso
+        const admin = data.user.is_admin ?? false;
         setUserEmail(data.user.email);
+        setIsAdmin(admin);
+        setActiveSection(admin ? 'home' : 'rrhh');
         setLoading(false);
 
       } catch (e) {
@@ -72,6 +74,7 @@ export default function EnterprisePanelPage() {
         active={activeSection}
         onSelect={setActiveSection}
         userEmail={userEmail}
+        isAdmin={isAdmin}
       />
       <EnterprisePanel section={activeSection} />
     </div>
