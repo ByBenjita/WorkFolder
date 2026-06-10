@@ -15,7 +15,11 @@ export async function GET(req: NextRequest) {
     const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
     return ok({
-      user: { id: user.id, email: user.email },
+      user: {
+        id:       user.id,
+        email:    user.email,
+        is_admin: user.app_metadata?.role === 'admin',
+      },
       aal:  {
         current:      aalData?.currentLevel,
         next:         aalData?.nextLevel,

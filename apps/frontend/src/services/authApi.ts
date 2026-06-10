@@ -30,7 +30,7 @@ export interface FactorResponse {
 
 export interface SessionResponse {
   success: boolean;
-  user:    { id: string; email: string };
+  user:    { id: string; email: string; is_admin: boolean };
   aal:     { current: string; next: string; mfa_complete: boolean };
 }
 
