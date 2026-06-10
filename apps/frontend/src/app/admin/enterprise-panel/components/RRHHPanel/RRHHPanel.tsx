@@ -48,6 +48,12 @@ const IconCheck = () => (
   </svg>
 );
 
+const IconSig = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+  </svg>
+);
+
 // ── Tipos del filtro ──────────────────────────────────────────────────────────
 const FILTROS: { id: FiltroTipo; label: string }[] = [
   { id: 'all',               label: 'Todos' },
@@ -256,6 +262,67 @@ function DeleteModal({
   );
 }
 
+// ── Sección de firmas (expandible) ───────────────────────────────────────────
+function SignatureSection({
+  doc,
+  usuarios,
+}: {
+  doc: RRHHDocumento;
+  usuarios: { id: string; full_name: string | null; email: string }[];
+}) {
+  const employer     = usuarios.find((u) => u.id === doc.asignado_por);
+  const empresa      = employer?.full_name ?? employer?.email ?? 'la Empresa';
+  const firmado      = doc.estado === 'firmado';
+  const trabajador   = doc.asignado_a_nombre ?? doc.asignado_a_email;
+
+  return (
+    <div className="sig-section">
+      <div className="sig-cols">
+
+        {/* Firma Empleador */}
+        <div className="sig-col">
+          <p className="sig-col-title">Firma Empleador</p>
+          <div className="sig-line" />
+          <p className="sig-col-name">{empresa}</p>
+          <p className="sig-col-sub">Empleador</p>
+          <p className="sig-col-date">
+            Emitido: {new Date(doc.creado_en).toLocaleDateString('es-CL')}
+          </p>
+        </div>
+
+        <div className="sig-divider" />
+
+        {/* Firma Trabajador */}
+        <div className="sig-col">
+          <p className="sig-col-title">Firma Trabajador</p>
+          {firmado ? (
+            <>
+              <div className="sig-recibo">✅ Recibí Conforme</div>
+              <p className="sig-legal">
+                Certifico que he recibido de <strong>{empresa}</strong>, a mi entera
+                satisfacción el saldo indicado en la presente Liquidación y no tengo cargo
+                ni cobro posterior que hacer.
+              </p>
+              <p className="sig-col-name">{trabajador}</p>
+              <p className="sig-col-date">
+                Firmado: {doc.firmado_en
+                  ? new Date(doc.firmado_en).toLocaleString('es-CL')
+                  : '—'}
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="sig-line" />
+              <p className="sig-pending">Pendiente de firma del trabajador</p>
+            </>
+          )}
+        </div>
+
+      </div>
+    </div>
+  );
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function RRHHPanel() {
   const {
@@ -272,6 +339,8 @@ export default function RRHHPanel() {
     stats,
     handleUpload, handleSign, handleDelete, handleDownload,
   } = useRRHHPanel();
+
+  const [expandedDocId, setExpandedDocId] = useState<string | null>(null);
 
   return (
     <div>
@@ -397,73 +466,89 @@ export default function RRHHPanel() {
               </thead>
               <tbody>
                 {documentos.map((doc) => (
-                  <tr key={doc.id}>
-                    <td>
-                      <div className="rrhh-file-cell">
-                        <div className="rrhh-file-ico">{TIPO_EMOJI[doc.tipo]}</div>
-                        <div>
-                          <p className="rrhh-file-name" title={doc.nombre_original}>{doc.nombre_original}</p>
-                          <p className="rrhh-file-size">{formatBytes(doc.tamano_bytes)}</p>
+                  <React.Fragment key={doc.id}>
+                    <tr>
+                      <td>
+                        <div className="rrhh-file-cell">
+                          <div className="rrhh-file-ico">{TIPO_EMOJI[doc.tipo]}</div>
+                          <div>
+                            <p className="rrhh-file-name" title={doc.nombre_original}>{doc.nombre_original}</p>
+                            <p className="rrhh-file-size">{formatBytes(doc.tamano_bytes)}</p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="chip-tipo">{TIPO_LABELS[doc.tipo]}</span>
-                    </td>
-                    <td>
-                      <div className="rrhh-emp">
-                        <div className="rrhh-avatar">
-                          {(doc.asignado_a_email[0] ?? 'U').toUpperCase()}
+                      </td>
+                      <td>
+                        <span className="chip-tipo">{TIPO_LABELS[doc.tipo]}</span>
+                      </td>
+                      <td>
+                        <div className="rrhh-emp">
+                          <div className="rrhh-avatar">
+                            {(doc.asignado_a_email[0] ?? 'U').toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="rrhh-emp-email" title={doc.asignado_a_email}>{doc.asignado_a_email}</p>
+                            {doc.asignado_a_nombre && (
+                              <p className="rrhh-emp-name">{doc.asignado_a_nombre}</p>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <p className="rrhh-emp-email" title={doc.asignado_a_email}>{doc.asignado_a_email}</p>
-                          {doc.asignado_a_nombre && (
-                            <p className="rrhh-emp-name">{doc.asignado_a_nombre}</p>
+                      </td>
+                      <td style={{ color: 'var(--wf-muted)', fontFamily: 'var(--wf-mono)', fontSize: '12px' }}>
+                        {formatPeriodo(doc.periodo)}
+                      </td>
+                      <td>
+                        {doc.estado === 'firmado'
+                          ? <span className="chip-firmado"><IconCheck /> Firmado</span>
+                          : <span className="chip-pendiente">● Pendiente</span>
+                        }
+                      </td>
+                      <td style={{ color: 'var(--wf-faint)', fontSize: '11.5px', fontFamily: 'var(--wf-mono)', whiteSpace: 'nowrap' }}>
+                        {new Date(doc.creado_en).toLocaleDateString('es-CL')}
+                      </td>
+                      <td>
+                        <div className="rrhh-actions">
+                          {doc.estado === 'pendiente' && (
+                            <button
+                              className="btn-sign"
+                              onClick={() => { setActionError(''); setSignTarget(doc); }}
+                            >
+                              <IconPen /> Firmar
+                            </button>
                           )}
+                          <button
+                            className="btn-dl"
+                            onClick={() => handleDownload(doc)}
+                            title="Descargar"
+                          >
+                            <IconDownload />
+                          </button>
+                          {isAdmin && (
+                            <button
+                              className="btn-del"
+                              onClick={() => { setActionError(''); setDeleteTarget(doc); }}
+                              title="Eliminar"
+                            >
+                              <IconTrash />
+                            </button>
+                          )}
+                          <button
+                            className={`btn-sig ${expandedDocId === doc.id ? 'active' : ''}`}
+                            onClick={() => setExpandedDocId(expandedDocId === doc.id ? null : doc.id)}
+                            title="Ver firmas"
+                          >
+                            <IconSig />
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--wf-muted)', fontFamily: 'var(--wf-mono)', fontSize: '12px' }}>
-                      {formatPeriodo(doc.periodo)}
-                    </td>
-                    <td>
-                      {doc.estado === 'firmado'
-                        ? <span className="chip-firmado"><IconCheck /> Firmado</span>
-                        : <span className="chip-pendiente">● Pendiente</span>
-                      }
-                    </td>
-                    <td style={{ color: 'var(--wf-faint)', fontSize: '11.5px', fontFamily: 'var(--wf-mono)', whiteSpace: 'nowrap' }}>
-                      {new Date(doc.creado_en).toLocaleDateString('es-CL')}
-                    </td>
-                    <td>
-                      <div className="rrhh-actions">
-                        {doc.estado === 'pendiente' && (
-                          <button
-                            className="btn-sign"
-                            onClick={() => { setActionError(''); setSignTarget(doc); }}
-                          >
-                            <IconPen /> Firmar
-                          </button>
-                        )}
-                        <button
-                          className="btn-dl"
-                          onClick={() => handleDownload(doc)}
-                          title="Descargar"
-                        >
-                          <IconDownload />
-                        </button>
-                        {isAdmin && (
-                          <button
-                            className="btn-del"
-                            onClick={() => { setActionError(''); setDeleteTarget(doc); }}
-                            title="Eliminar"
-                          >
-                            <IconTrash />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                    {expandedDocId === doc.id && (
+                      <tr className="sig-expanded-row">
+                        <td colSpan={7}>
+                          <SignatureSection doc={doc} usuarios={usuarios} />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

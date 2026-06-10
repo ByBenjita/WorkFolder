@@ -614,4 +614,150 @@ export const rrhhStyles = css.global`
     align-items: center;
     gap: 8px;
   }
+
+  /* ── Botón toggle firmas ──────────────────────────────────── */
+  .btn-sig {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background-color: var(--wf-surface);
+    border: 1px solid var(--wf-line);
+    color: var(--wf-muted);
+    border-radius: 7px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.14s ease;
+  }
+
+  .btn-sig:hover {
+    border-color: var(--wf-primary);
+    color: var(--wf-primary);
+    background-color: var(--wf-primary-soft);
+  }
+
+  .btn-sig.active {
+    background-color: var(--wf-primary);
+    border-color: var(--wf-primary);
+    color: #ffffff;
+  }
+
+  /* ── Fila expandida ───────────────────────────────────────── */
+  .sig-expanded-row td {
+    padding: 0 !important;
+    border-bottom: 2px solid var(--wf-primary-soft);
+  }
+
+  /* ── Sección de firmas ────────────────────────────────────── */
+  .sig-section {
+    padding: 20px 28px 24px;
+    background: linear-gradient(180deg, var(--wf-surface-2) 0%, var(--wf-surface) 100%);
+    border-top: 1px solid var(--wf-line-soft);
+  }
+
+  .sig-cols {
+    display: flex;
+    gap: 0;
+    align-items: flex-start;
+  }
+
+  .sig-col {
+    flex: 1;
+    padding: 0 24px;
+  }
+
+  .sig-col:first-child {
+    padding-left: 0;
+  }
+
+  .sig-col:last-child {
+    padding-right: 0;
+  }
+
+  .sig-divider {
+    width: 1px;
+    background-color: var(--wf-line);
+    align-self: stretch;
+    min-height: 120px;
+    flex-shrink: 0;
+  }
+
+  .sig-col-title {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--wf-muted);
+    margin: 0 0 14px;
+  }
+
+  .sig-line {
+    width: 100%;
+    border-top: 1.5px solid var(--wf-ink);
+    margin-bottom: 10px;
+    opacity: 0.25;
+  }
+
+  .sig-col-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wf-ink);
+    margin: 0 0 2px;
+  }
+
+  .sig-col-sub {
+    font-size: 11px;
+    color: var(--wf-muted);
+    margin: 0 0 6px;
+  }
+
+  .sig-col-date {
+    font-size: 11px;
+    font-family: var(--wf-mono);
+    color: var(--wf-faint);
+    margin: 0;
+  }
+
+  /* ── Recibí conforme ──────────────────────────────────────── */
+  .sig-recibo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    background-color: var(--wf-safe-soft);
+    border: 1px solid oklch(0.62 0.13 158 / 0.3);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--wf-safe-strong);
+    margin-bottom: 12px;
+  }
+
+  /* ── Texto legal ──────────────────────────────────────────── */
+  .sig-legal {
+    font-size: 11.5px;
+    color: var(--wf-muted);
+    font-style: italic;
+    line-height: 1.6;
+    margin: 0 0 12px;
+    padding: 10px 14px;
+    background-color: oklch(0.97 0.01 264 / 0.5);
+    border-left: 3px solid var(--wf-safe);
+    border-radius: 0 6px 6px 0;
+  }
+
+  .sig-legal strong {
+    font-style: normal;
+    font-weight: 700;
+    color: var(--wf-ink-2);
+  }
+
+  /* ── Pendiente ────────────────────────────────────────────── */
+  .sig-pending {
+    font-size: 12px;
+    color: var(--wf-faint);
+    font-style: italic;
+    margin: 10px 0 0;
+  }
 `;

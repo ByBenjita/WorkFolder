@@ -54,15 +54,16 @@ interface Props {
   active: AdminSection;
   onSelect: (section: AdminSection) => void;
   userEmail: string;
+  isAdmin: boolean;
 }
 
-// ── Grupos de navegación ────────────────────────────────
-const NAV_GROUPS: { label: string; ids: AdminSection[] }[] = [
+// ── Grupos de navegación (solo admins) ──────────────────
+const ADMIN_NAV_GROUPS: { label: string; ids: AdminSection[] }[] = [
   { label: 'Plataforma',     ids: ['home', 'usuarios', 'rrhh'] },
   { label: 'Almacenamiento', ids: ['boveda', 'seguridad', 'auditoria', 'facturacion'] },
 ];
 
-export default function EnterpriseSidebar({ active, onSelect, userEmail }: Props) {
+export default function EnterpriseSidebar({ active, onSelect, userEmail, isAdmin }: Props) {
   const { loggingOut, handleLogout } = useSidebar();
 
   return (
@@ -80,29 +81,41 @@ export default function EnterpriseSidebar({ active, onSelect, userEmail }: Props
 
       {/* ── Nav ── */}
       <nav className="nav">
-        {NAV_GROUPS.map((group) => (
-          <React.Fragment key={group.label}>
-            <div className="nav-group-label">{group.label}</div>
-            {NAV_ITEMS.filter((i) => group.ids.includes(i.id)).map((item) => {
-              const isActive = active === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => onSelect(item.id)}
-                  className={`nav-button ${isActive ? 'active' : ''}`}
-                >
-                  <span className="nav-icon">{Icons[item.iconName]}</span>
-                  <span className="nav-label">{item.label}</span>
-                  {item.badge && (
-                    <span className={`nav-badge ${isActive ? 'active' : ''}`}>
-                      {item.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </React.Fragment>
-        ))}
+        {isAdmin ? (
+          // Admin: muestra todos los grupos y secciones
+          ADMIN_NAV_GROUPS.map((group) => (
+            <React.Fragment key={group.label}>
+              <div className="nav-group-label">{group.label}</div>
+              {NAV_ITEMS.filter((i) => group.ids.includes(i.id)).map((item) => {
+                const isActive = active === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => onSelect(item.id)}
+                    className={`nav-button ${isActive ? 'active' : ''}`}
+                  >
+                    <span className="nav-icon">{Icons[item.iconName]}</span>
+                    <span className="nav-label">{item.label}</span>
+                    {item.badge && (
+                      <span className={`nav-badge ${isActive ? 'active' : ''}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </React.Fragment>
+          ))
+        ) : (
+          // Usuario RRHH: solo ve sus documentos personales
+          <button
+            onClick={() => onSelect('rrhh')}
+            className="nav-button active"
+          >
+            <span className="nav-icon">{Icons.UserCheck}</span>
+            <span className="nav-label">Documentos Personales</span>
+          </button>
+        )}
       </nav>
 
       {/* ── Footer ── */}
