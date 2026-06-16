@@ -11,7 +11,8 @@
     "DOCUMENTOS_API_URL",
     "FACTURACION_API_URL",
     "MP_ACCESS_TOKEN",
-    "MP_CURRENCY"
+    "MP_CURRENCY",
+    "MP_BACK_URL"
   ],
   "tasks": {
     "build": {
