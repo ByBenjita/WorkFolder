@@ -7,13 +7,13 @@ import {
   useHomeSection,
   MOCK_LOGS,
   SECURITY_CHECKS,
-  INVOICES,
 } from './useEnterprisePanel';
 
-import BovedaPanel      from '../../../../components/boveda/BovedaPanel';
-import AdminBovedaPanel from '../AdminBovedaPanel/AdminBovedaPanel';
-import AdminUsersPanel  from '../AdminUsersPanel/AdminUsersPanel';
-import RRHHPanel        from '../RRHHPanel/RRHHPanel';
+import BovedaPanel       from '../../../../components/boveda/BovedaPanel';
+import AdminBovedaPanel  from '../AdminBovedaPanel/AdminBovedaPanel';
+import AdminUsersPanel   from '../AdminUsersPanel/AdminUsersPanel';
+import RRHHPanel         from '../RRHHPanel/RRHHPanel';
+import FacturacionPanel  from '../Facturacion/FacturacionPanel';
 
 interface Props {
   section: AdminSection;
@@ -159,32 +159,6 @@ function AuditoriaSection() {
   );
 }
 
-// ── Sección FACTURACIÓN ──────────────────────────────────────────
-function FacturacionSection() {
-  return (
-    <div>
-      <SectionTitle>Facturación</SectionTitle>
-      <div className="stats-row">
-        <Stat label="Plan Actual"      value="Enterprise" sub="Activo hasta Dic 2024" accent />
-        <Stat label="Próximo Cobro"    value="US$149"     sub="01 de Diciembre 2024" />
-        <Stat label="Usuarios Pagados" value="5"          sub="$29/usuario/mes" />
-      </div>
-      <Card>
-        <h3 className="card-title card-title-mb">Historial de Facturas</h3>
-        {INVOICES.map((f, i) => (
-          <div key={i} className="item-row">
-            <span className="invoice-mes">📄 {f.mes}</span>
-            <div className="invoice-right">
-              <span className="invoice-monto">{f.monto}</span>
-              <span className="chip green">{f.estado}</span>
-              <button className="btn-ghost">PDF</button>
-            </div>
-          </div>
-        ))}
-      </Card>
-    </div>
-  );
-}
 
 // ── Sección RRHH ─────────────────────────────────────────────────
 function RRHHSection() {
@@ -199,7 +173,7 @@ const SECTION_MAP: Record<AdminSection, React.ReactNode> = {
   boveda:      <BovedaSection />,          
   seguridad:   <SeguridadSection />,
   auditoria:   <AuditoriaSection />,
-  facturacion: <FacturacionSection />,
+  facturacion: <FacturacionPanel />,
 };
 
 // ── Componente principal ─────────────────────────────────────────
