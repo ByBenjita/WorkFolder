@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    const r = result as Record<string, unknown>;
+    const r = result as unknown as Record<string, unknown>;
     return ok({
       init_point:         r['init_point'],
       sandbox_init_point: r['sandbox_init_point'] ?? null,
