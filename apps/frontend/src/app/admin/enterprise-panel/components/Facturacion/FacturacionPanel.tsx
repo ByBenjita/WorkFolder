@@ -340,6 +340,7 @@ export default function FacturacionPanel() {
   } = useFacturacionPanel();
 
   const planActual: PlanId = suscripcion?.plan_id ?? 'startup';
+  const planActualObj = planes.find((p) => p.id === planActual);
 
   if (loading) {
     return (
@@ -362,54 +363,102 @@ export default function FacturacionPanel() {
   return (
     <div className="fact-wrapper">
       <style jsx global>{facturacionStyles}</style>
+      <div className="fact-inner">
 
-      <h2 className="fact-title">Planes de Suscripción</h2>
+        {/* ── Encabezado ── */}
+        <div className="fact-head">
+          <div className="fact-page-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+              <rect x="4" y="3" width="16" height="18" rx="2.5" />
+              <path d="M8 8h8M8 12h8M8 16h5" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="fact-page-title">Facturación</h1>
+            <p className="fact-page-sub">Gestiona tu suscripción, plan y método de pago</p>
+          </div>
+        </div>
 
-      {successMsg  && <p className="fact-success">{successMsg}</p>}
-      {actionError && <p className="fact-action-error">{actionError}</p>}
-
-      {/* ── Tarjetas de planes ── */}
-      <div className="fact-plans">
-        {planes.map((plan) => (
-          <PlanCard
-            key={plan.id}
-            plan={plan}
-            planActual={planActual}
-            onSolicitarCambio={abrirModal}
-            actionLoading={redirigiendo}
-          />
-        ))}
-      </div>
-
-      {/* ── Nota de pagos ── */}
-      <p className="fact-stripe-note">
-        <span className="fact-stripe-dot" />
-        Pagos procesados de forma segura mediante Mercado Pago. El cambio de plan es inmediato al confirmar el pago.
-      </p>
-
-      {/* ── Historial de facturas ── */}
-      <div className="fact-invoices">
-        <h3 className="fact-invoices-title">Historial de Facturas</h3>
-
-        {facturas.length === 0 ? (
-          <p className="fact-empty">Sin facturas registradas.</p>
-        ) : (
-          facturas.map((f) => (
-            <div key={f.id} className="fact-invoice-row">
-              <span className="fact-invoice-period">
-                {formatPeriodo(f.periodo_inicio)}
-              </span>
-              <div className="fact-invoice-right">
-                <span className="fact-invoice-amount">
-                  US${Number(f.monto).toFixed(2)}
-                </span>
-                <span className={chipClass(f.estado)}>
-                  {chipLabel(f.estado)}
-                </span>
+        {/* ── Banner Plan actual ── */}
+        {planActualObj && (
+          <div className="fact-current">
+            <div className="fact-current-ic">
+              <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3 5 6v6c0 4.2 2.9 7.4 7 8.7 4.1-1.3 7-4.5 7-8.7V6z" />
+                <path d="m9.2 12 1.9 1.9 3.7-3.8" />
+              </svg>
+            </div>
+            <div>
+              <div className="fact-current-label">Plan actual</div>
+              <div className="fact-current-name">
+                {planActualObj.nombre}
+                <span className="fact-current-badge">Activo</span>
               </div>
             </div>
-          ))
+            <div className="fact-current-meta">
+              <div className="fact-current-stat">
+                <div className="k">Costo mensual</div>
+                <div className="v sans"><span className="fact-curr-sym">US$</span>{planActualObj.precio_mensual}<small> + IVA</small></div>
+              </div>
+              <div className="fact-current-stat">
+                <div className="k">Método</div>
+                <div className="v sans">Mercado Pago</div>
+              </div>
+            </div>
+          </div>
         )}
+
+        <h2 className="fact-title">Planes de Suscripción</h2>
+
+        {successMsg  && <p className="fact-success">{successMsg}</p>}
+        {actionError && <p className="fact-action-error">{actionError}</p>}
+
+        {/* ── Tarjetas de planes ── */}
+        <div className="fact-plans">
+          {planes.map((plan) => (
+            <PlanCard
+              key={plan.id}
+              plan={plan}
+              planActual={planActual}
+              onSolicitarCambio={abrirModal}
+              actionLoading={redirigiendo}
+            />
+          ))}
+        </div>
+
+        {/* ── Nota de pagos ── */}
+        <p className="fact-stripe-note">
+          <span className="fact-stripe-dot" />
+          Pagos procesados de forma segura mediante Mercado Pago. El cambio de plan es inmediato al confirmar el pago.
+        </p>
+
+        {/* ── Historial de facturas ── */}
+        <div className="fact-invoices">
+          <h3 className="fact-invoices-title">Historial de Facturas</h3>
+
+          {facturas.length === 0 ? (
+            <p className="fact-empty">Sin facturas registradas.</p>
+          ) : (
+            facturas.map((f) => (
+              <div key={f.id} className="fact-invoice-row">
+                <span className="fact-invoice-period">
+                  {formatPeriodo(f.periodo_inicio)}
+                </span>
+                <div className="fact-invoice-right">
+                  <span className="fact-invoice-amount">
+                    US${Number(f.monto).toFixed(2)}
+                  </span>
+                  <span className={chipClass(f.estado)}>
+                    {chipLabel(f.estado)}
+                  </span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
       </div>
 
       {/* ── Modal de dos pasos ── */}
