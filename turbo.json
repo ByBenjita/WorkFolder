@@ -8,7 +8,10 @@
     "SUPABASE_ANON_KEY",
     "FRONTEND_URL",
     "USUARIOS_API_URL",
-    "DOCUMENTOS_API_URL"
+    "DOCUMENTOS_API_URL",
+    "FACTURACION_API_URL",
+    "MP_ACCESS_TOKEN",
+    "MP_CURRENCY"
   ],
   "tasks": {
     "build": {
