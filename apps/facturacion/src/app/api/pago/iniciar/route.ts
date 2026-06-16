@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/enterprise-panel`;
 
     const preApproval = new PreApproval(getMpClient());
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await preApproval.create({
       body: {
         reason: `WorkFolder ${plan.nombre} - Plan Mensual`,
@@ -57,10 +58,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    const r = result as unknown as Record<string, unknown>;
     return ok({
-      init_point:         result.init_point,
-      sandbox_init_point: result.sandbox_init_point,
-      preapproval_id:     result.id,
+      init_point:         r['init_point'],
+      sandbox_init_point: r['sandbox_init_point'] ?? null,
+      preapproval_id:     r['id'],
     });
   } catch (e: unknown) {
     const detail =
