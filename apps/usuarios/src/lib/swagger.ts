@@ -65,6 +65,7 @@ export function buildSwaggerSpec(baseUrl: string) {
       post: {
         tags:    ['Auth'],
         summary: 'Iniciar sesión',
+        security: undefined,
         requestBody: {
           required: true,
           content: {
@@ -156,6 +157,7 @@ export function buildSwaggerSpec(baseUrl: string) {
       post: {
         tags:    ['Auth'],
         summary: 'Solicitar restablecimiento de contraseña',
+        security: undefined,
         requestBody: {
           required: true,
           content: {
@@ -178,6 +180,7 @@ export function buildSwaggerSpec(baseUrl: string) {
       post: {
         tags:    ['Auth'],
         summary: 'Restablecer contraseña con token',
+        security: undefined,
         requestBody: {
           required: true,
           content: {
@@ -204,6 +207,7 @@ export function buildSwaggerSpec(baseUrl: string) {
       post: {
         tags:    ['Auth'],
         summary: 'Verificar 2FA antes de restablecer contraseña',
+        security: undefined,
         requestBody: {
           required: true,
           content: {
