@@ -39,4 +39,4 @@ Thumbs.db
 *.sw?
 
 # ─── Vercel / Despliegues ──────────────────────────────────────
-.vercel
+.vercelapps/*/coverage/
