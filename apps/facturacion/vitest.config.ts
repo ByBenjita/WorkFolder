@@ -16,7 +16,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.ts'],
-      exclude: ['src/**/__tests__/**'],
+      exclude: ['src/**/__tests__/**', 'src/lib/swagger.ts', 'src/app/api/swagger/**', 'src/app/docs/**'],
       reporter: ['text', 'html', 'json-summary'],
       reportsDirectory: './coverage',
     },
