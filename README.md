@@ -1,54 +1,136 @@
-# 🛡️ WorkFolder — Bóveda Digital Segura
+# WorkFolder — Bóveda Digital Segura
 
-WorkFolder es una plataforma de gestión documental orientada a la máxima seguridad. Diseñada con una arquitectura de monorepo, implementa cifrado de grado militar (AES-256-GCM), auditoría inmutable ("Eventos de Vida") y un patrón BFF (Backend for Frontend).
+WorkFolder es una plataforma de gestión documental con enfoque en seguridad. Implementa cifrado AES-256-GCM extremo a extremo, auditoría inmutable y una arquitectura de microservicios en monorepo.
 
-## ✨ Características Principales
+## Arquitectura
 
-- **Cifrado E2EE (End-to-End Encryption):** Todos los documentos se cifran con `AES-256-GCM` antes de ser subidos al Storage.
-- **Auditoría Inmutable:** Registro estricto de accesos, subidas y eliminaciones (Append-only).
-- **Arquitectura Monorepo:** Separación limpia entre Frontend, Backend y Tipos Compartidos.
-- **Patrón BFF (Backend For Frontend):** Next.js actúa como proxy de seguridad ocultando el Backend real.
-- **Stub Local Inteligente:** Capacidad de desarrollar offline sin necesidad de conexión inmediata a la base de datos real.
+El proyecto es un **monorepo pnpm + Turborepo** compuesto por:
 
-## 🛠️ Stack Tecnológico
+| App / Paquete | Ruta | Puerto | Descripción |
+|---|---|---|---|
+| Frontend | `apps/frontend` | 3000 | UI principal + BFF (Backend for Frontend) |
+| Usuarios | `apps/usuarios` | 3001 | Microservicio de autenticación y usuarios |
+| Documentos | `apps/documentos` | 3002 | Microservicio de gestión y cifrado de documentos |
+| Facturación | `apps/facturacion` | 3003 | Microservicio de pagos (Mercado Pago) |
+| Utils | `packages/utils` | — | Librería compartida (cifrado AES-256-GCM) |
 
-- **Frontend:** Next.js, React, Tailwind CSS.
-- **Backend:** Node.js, Express, TypeScript (ESM con `tsx`), Multer, Helmet.
-- **Base de Datos & Storage:** Supabase (PostgreSQL + Buckets).
-- **Criptografía:** Módulo nativo `crypto` de Node.js.
-- **Gestión de Monorepo:** npm workspaces + concurrently.
+## Stack Tecnológico
 
-## 📂 Estructura del Proyecto
+- **Framework:** Next.js 14 (apps/routes como API y UI)
+- **Base de datos y Storage:** Supabase (PostgreSQL + Buckets)
+- **Pagos:** Mercado Pago SDK
+- **Criptografía:** Node.js `crypto` nativo — AES-256-GCM
+- **Testing:** Vitest
+- **Monorepo:** pnpm Workspaces + Turborepo
 
-- **`workfolder/`** (Raíz del monorepo)
-  - **`apps/`**
-    - `frontend/` — Aplicación Next.js (UI y BFF)
-    - `backend/` — Microservicio Express (Lógica de negocio, Cifrado, DB)
-  - **`packages/`**
-    - `types/` — Interfaces de TypeScript compartidas (`@workfolder/types`)
-  - `.env.example` — Plantilla de variables de entorno
-  - `.gitignore` — Archivos ignorados por Git
-  - `package.json` — Configuración del workspace y scripts globales
+## Prerrequisitos
 
-## 🚀 Instalación y Uso Local
+- Node.js v18 o superior
+- pnpm v11 o superior (`npm install -g pnpm`)
 
-### 1. Prerrequisitos
-- Node.js (v18 o superior)
-- npm (v9 o superior)
+## Instalación
 
-### 2. Instalación de dependencias
-Ejecuta el siguiente comando en la raíz del proyecto para instalar las dependencias de todos los paquetes al mismo tiempo:
-\`\`\`bash
-npm install
-\`\`\`
+Desde la raíz del proyecto, instala todas las dependencias de todas las apps y paquetes:
 
-### 3. Levantar el entorno de desarrollo
-Inicia tanto el Frontend como el Backend simultáneamente con un solo comando desde la raíz:
-\`\`\`bash
-npm run dev
-\`\`\`
+```bash
+pnpm install
+```
 
-- **Frontend (Next.js):** http://localhost:3000
-- **Backend (Express):** http://localhost:3001
-- **Healthcheck Backend:** http://localhost:3001/health
-- **Test BFF Proxy:** http://localhost:3000/api/proxy/health
+## Variables de Entorno
+
+Cada app tiene su propio `.env.local`. Consulta el README de cada componente para ver las variables requeridas. Las variables globales utilizadas por Turborepo son:
+
+```
+NEXT_PUBLIC_SUPABASE_URL
+SUPABASE_URL
+SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+ENCRYPTION_KEY
+FRONTEND_URL
+USUARIOS_API_URL
+DOCUMENTOS_API_URL
+FACTURACION_API_URL
+MP_ACCESS_TOKEN
+MP_CURRENCY
+MP_BACK_URL
+```
+
+## Levantar el Entorno Completo
+
+Para iniciar todas las apps en paralelo desde la raíz:
+
+```bash
+pnpm dev
+```
+
+Esto ejecuta `turbo dev` y levanta todas las apps simultáneamente:
+
+- Frontend: http://localhost:3000
+- Usuarios API: http://localhost:3001
+- Documentos API: http://localhost:3002
+- Facturación API: http://localhost:3003
+
+## Levantar una App Individual
+
+```bash
+# Solo el frontend
+pnpm --filter frontend dev
+
+# Solo el microservicio de usuarios
+pnpm --filter usuarios dev
+
+# Solo el microservicio de documentos
+pnpm --filter documentos dev
+
+# Solo el microservicio de facturación
+pnpm --filter facturacion dev
+```
+
+## Build
+
+```bash
+# Build de todas las apps
+pnpm build
+
+# Build de una app específica
+pnpm --filter frontend build
+```
+
+## Tests
+
+```bash
+# Ejecutar tests de todas las apps
+pnpm --filter "*" test
+
+# Tests de una app específica
+pnpm --filter usuarios test
+pnpm --filter documentos test
+pnpm --filter facturacion test
+pnpm --filter frontend test
+```
+
+## Estructura de Carpetas
+
+```
+WorkFolder/
+├── apps/
+│   ├── frontend/        # UI + BFF (puerto 3000)
+│   ├── usuarios/        # API usuarios (puerto 3001)
+│   ├── documentos/      # API documentos (puerto 3002)
+│   ├── facturacion/     # API pagos (puerto 3003)
+│   ├── auditoria/       # (pendiente)
+│   └── reportes/        # (pendiente)
+├── packages/
+│   └── utils/           # Librería compartida (@workfolder/utils)
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
+```
+
+## READMEs por Componente
+
+- [Frontend](apps/frontend/README.md)
+- [Microservicio Usuarios](apps/usuarios/README.md)
+- [Microservicio Documentos](apps/documentos/README.md)
+- [Microservicio Facturación](apps/facturacion/README.md)
+- [Paquete Utils](packages/utils/README.md)
