@@ -1,83 +1,104 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { twoFAStyles } from './TwoFAPage.styles';
 import { use2FA } from './use2FA';
 import PageTransition from '../../components/PageTransition';
 
 export default function TwoFAPage() {
-  // Obtenemos qrCodeData directamente del hook
   const { code, qrCodeData, handleInputChange, handleSubmit, loading } = use2FA();
+
+  // Foco en el primer dígito al cargar
+  useEffect(() => {
+    document.getElementById('otp-0')?.focus();
+  }, []);
+
+  const codeComplete = code.join('').length === 6;
 
   return (
     <PageTransition direction="left">
       <style jsx>{twoFAStyles}</style>
-      
+
       <main className="tfa-root">
+        <div className="grid-bg" />
+
         <div className="tfa-card">
-          <h1 className="tfa-title">🔐 Configuración de Seguridad</h1>
-          
-          <p className="tfa-description">
-            Para proteger los archivos de la empresa, debes habilitar la Autenticación de Dos Pasos (2FA) antes de continuar.
+          <div className="tfa-icon">🔐</div>
+
+          <h1 className="tfa-title">Autenticación en Dos Pasos</h1>
+          <p className="tfa-subtitle">
+            Protege el acceso a la bóveda vinculando una app de autenticación
+            (Google Authenticator, Authy, 1Password…).
           </p>
 
-          <span className="tfa-step">
-            Paso 1: Escanea este código con tu App<br/>
-            (Google Authenticator, Authy, etc.)
-          </span>
-          
-          <div className="qr-container">
-            <div className="qr-wrapper">
-              {/* CAMBIO CLAVE: Usamos qrCodeData directamente si existe */}
+          <div className="tfa-step">
+            <span className="tfa-step-num">1</span>
+            <span className="tfa-step-text">
+              Escanea este código con tu app de autenticación
+            </span>
+          </div>
+
+          <div className="tfa-qr">
+            <div className="tfa-qr-frame">
               {qrCodeData ? (
-                <img 
-                  src={qrCodeData} 
-                  alt="QR MFA" 
-                  width={150} 
-                  height={150} 
-                  style={{ 
-                    display: 'block', 
-                    margin: '0 auto',
-                    backgroundColor: 'white', // Fondo blanco para que el lector lo reconozca bien
-                    padding: '8px',
-                    borderRadius: '4px'
-                  }} 
+                <img
+                  src={qrCodeData}
+                  alt="Código QR para configurar MFA"
+                  width={160}
+                  height={160}
                 />
               ) : (
-                <div style={{ width: 120, height: 120, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666', fontSize: '10px', textAlign: 'center' }}>
-                  {loading ? "Generando QR..." : "Error al cargar el código"}
+                <div className="tfa-qr-loading">
+                  {loading ? 'Generando código…' : 'No se pudo cargar el código'}
                 </div>
               )}
             </div>
           </div>
 
-          <span className="tfa-step">Paso 2: Ingresa el código de 6 dígitos</span>
+          <div className="tfa-divider" />
 
-          <form onSubmit={(e: React.FormEvent) => { e.preventDefault(); handleSubmit(); }}>
-            <div className="tfa-input-group">
+          <div className="tfa-step">
+            <span className="tfa-step-num">2</span>
+            <span className="tfa-step-text">
+              Ingresa el código de 6 dígitos que muestra la app
+            </span>
+          </div>
+
+          <form
+            onSubmit={(e: React.FormEvent) => {
+              e.preventDefault();
+              handleSubmit();
+            }}
+          >
+            <div className="tfa-otp">
               {code.map((digit, index) => (
                 <React.Fragment key={index}>
                   <input
                     id={`otp-${index}`}
                     type="text"
                     inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={1}
-                    className="tfa-input"
+                    className="tfa-otp-input"
                     value={digit}
                     onChange={(e) => handleInputChange(e.target.value, index)}
                     required
                   />
-                  {index === 2 && <span className="tfa-separator">-</span>}
+                  {index === 2 && <span className="tfa-otp-sep">–</span>}
                 </React.Fragment>
               ))}
             </div>
 
-            <button type="submit" className="tfa-button" disabled={loading}>
-              {loading ? "Verificando..." : "Verificar y Activar"}
+            <button
+              type="submit"
+              className="tfa-button"
+              disabled={loading || !codeComplete}
+            >
+              {loading ? 'Cargando…' : 'Verificar y Activar'}
             </button>
           </form>
 
-          <p className="tfa-footer">WorkFolder Secure Vault</p>
+          <p className="tfa-footer">WorkFolder Secure Vault · Enterprise</p>
         </div>
       </main>
     </PageTransition>
