@@ -3,139 +3,226 @@ import css from 'styled-jsx/css';
 export const twoFAStyles = css`
   .tfa-root {
     min-height: 100vh;
-    background-image: 
-      linear-gradient(rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0.85)), 
+    background-image:
+      linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)),
       url('/background.png');
     background-size: cover;
     background-position: center;
+    background-repeat: no-repeat;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: "Segoe UI", system-ui, sans-serif;
+    position: relative;
+    overflow: hidden;
+    padding: 24px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
   }
 
-  /* Card Ultra Compacta */
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  /* ── Tarjeta (mismo lenguaje que el login: glass + azul) ── */
   .tfa-card {
     position: relative;
     z-index: 10;
     width: 100%;
-    max-width: 340px;
-    padding: 24px 20px;
-    background-color: #121212; 
-    border: 1px solid #222;
-    border-radius: 40px; 
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+    max-width: 430px;
+    background-color: rgba(23, 23, 23, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 40px 36px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
     text-align: center;
+  }
+
+  .tfa-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 18px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    background: linear-gradient(
+      135deg,
+      rgba(30, 144, 255, 0.16),
+      rgba(30, 144, 255, 0.3)
+    );
+    border: 1px solid rgba(30, 144, 255, 0.35);
   }
 
   .tfa-title {
     color: #ffffff;
-    font-size: 19px;
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+    margin-bottom: 8px;
   }
 
-  .tfa-description {
-    color: #5d6d7e;
-    font-size: 11px;
-    line-height: 1.3;
-    margin-bottom: 16px;
+  .tfa-subtitle {
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 13px;
+    line-height: 1.55;
+    margin-bottom: 26px;
   }
 
+  /* ── Paso numerado ── */
   .tfa-step {
-    color: #ffffff;
-    font-size: 11px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    margin-bottom: 14px;
   }
 
-  .qr-container {
+  .tfa-step-num {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: rgba(30, 144, 255, 0.14);
+    border: 1px solid rgba(30, 144, 255, 0.4);
+    color: #4aa8ff;
+    font-size: 11px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tfa-step-text {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .tfa-divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    margin: 22px 0;
+  }
+
+  /* ── QR ── */
+  .tfa-qr {
     display: flex;
     justify-content: center;
-    margin-bottom: 16px;
+    margin: 6px 0 4px;
   }
 
-  .qr-wrapper {
+  .tfa-qr-frame {
+    padding: 14px;
     background: #ffffff;
-    padding: 8px;
+    border-radius: 14px;
+    box-shadow:
+      0 0 0 1px rgba(30, 144, 255, 0.25),
+      0 12px 30px rgba(0, 0, 0, 0.45);
+  }
+
+  .tfa-qr-frame img {
+    display: block;
+    border-radius: 4px;
+  }
+
+  .tfa-qr-loading {
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #9aa0a6;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px dashed rgba(0, 0, 0, 0.15);
     border-radius: 6px;
   }
 
-  /* Recuadros de código con Glow RGB */
-  .tfa-input-group {
+  /* ── Casillas OTP (mismo estilo que la pantalla de verificación) ── */
+  .tfa-otp {
     display: flex;
-    gap: 4px;
+    gap: 7px;
     justify-content: center;
     align-items: center;
-    margin-bottom: 20px;
+    margin-bottom: 22px;
   }
 
-  .tfa-input {
-    width: 32px;
-    height: 42px;
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid #333;
-    border-radius: 6px;
+  .tfa-otp-input {
+    width: 40px;
+    height: 50px;
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
     text-align: center;
-    font-size: 16px;
+    font-size: 20px;
     font-weight: 700;
     color: #ffffff;
     outline: none;
-    transition: all 0.3s ease;
+    transition:
+      border-color 0.2s ease,
+      background-color 0.2s ease,
+      box-shadow 0.2s ease;
   }
 
-  .tfa-input:focus {
-    border-color: #3b82f6;
-    background-color: rgba(59, 158, 255, 0.1);
-    /* Glow Azul */
-    box-shadow: 0 0 8px rgba(59, 130, 246, 0.6), 
-                0 0 15px rgba(59, 130, 246, 0.4);
-    transform: translateY(-1px);
+  .tfa-otp-input:focus {
+    border-color: #1e90ff;
+    background-color: rgba(30, 144, 255, 0.1);
+    box-shadow: 0 0 0 4px rgba(30, 144, 255, 0.15);
   }
 
-  .tfa-separator {
-    color: #3b82f6;
-    font-size: 16px;
-    font-weight: bold;
+  .tfa-otp-sep {
+    color: rgba(255, 255, 255, 0.22);
+    font-size: 18px;
+    font-weight: 700;
   }
 
-  /* Botón con resaltado Glow al pasar el mouse */
+  /* ── Botón (estilo de la app) ── */
   .tfa-button {
     width: 100%;
-    background-color: #4f8cf6;
-    color: #000000;
-    font-weight: 800;
-    font-size: 13px;
-    padding: 12px;
-    border-radius: 8px;
+    background-color: #1e90ff;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 14px;
+    padding: 15px;
+    border-radius: 12px;
     border: none;
     cursor: pointer;
-    text-transform: uppercase;
-    margin-bottom: 16px;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(30, 144, 255, 0.3);
   }
 
-  .tfa-button:hover {
-    background-color: #60a5fa;
-    transform: translateY(-2px);
-    /* Glow del Botón */
-    box-shadow: 0 0 15px rgba(79, 140, 246, 0.6), 
-                0 0 30px rgba(79, 140, 246, 0.3);
+  .tfa-button:hover:not(:disabled) {
+    background-color: #1478e0;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 15px rgba(30, 144, 255, 0.4);
   }
 
-  .tfa-button:active {
+  .tfa-button:active:not(:disabled) {
     transform: translateY(0);
-    box-shadow: 0 0 5px rgba(79, 140, 246, 0.8);
+  }
+
+  .tfa-button:disabled {
+    background-color: #2a2a2a;
+    color: #6b7280;
+    cursor: not-allowed;
+    box-shadow: none;
   }
 
   .tfa-footer {
-    color: #3e4a59;
+    color: rgba(255, 255, 255, 0.3);
     font-size: 11px;
     font-weight: 600;
+    letter-spacing: 0.3px;
+    margin-top: 20px;
   }
 `;
