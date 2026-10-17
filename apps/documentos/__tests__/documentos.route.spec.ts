@@ -10,7 +10,11 @@ const mockClient = vi.hoisted(() => ({
   },
   from: vi.fn(),
   storage: { from: vi.fn() },
+  schema: vi.fn(),
 }));
+
+// rpc de pgmq_public (cola de auditoría)
+const mockRpc = vi.hoisted(() => vi.fn());
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -52,6 +56,8 @@ beforeEach(() => {
   mockClient.auth.mfa.challengeAndVerify.mockReset();
   mockClient.from.mockReset();
   mockClient.storage.from.mockReset();
+  mockRpc.mockReset().mockResolvedValue({ data: [1], error: null });
+  mockClient.schema.mockReset().mockReturnValue({ rpc: mockRpc });
 });
 
 describe('POST /api/documentos (subida)', () => {
@@ -99,8 +105,12 @@ describe('POST /api/documentos (subida)', () => {
     expect(json.success).toBe(true);
     expect(bucket.upload).toHaveBeenCalledOnce();
 
-    // La clave guardada en BD debe estar cifrada (formato iv:datos), nunca en texto plano
-    const insertArgs = mockClient.from.mock.calls.length > 0 ? undefined : undefined;
+    // Auditoría: se encola un evento de subida sin la clave del usuario
+    expect(mockRpc).toHaveBeenCalledWith('send', expect.objectContaining({
+      queue_name: 'audit_events',
+      message:    expect.objectContaining({ evento: 'Subida', user_id: 'u1', documento_id: 'doc-1' }),
+    }));
+    expect(JSON.stringify(mockRpc.mock.calls)).not.toContain('clave-segura-123');
   });
 
   it('devuelve 500 si Supabase Storage falla al subir', async () => {
@@ -158,6 +168,10 @@ describe('GET /api/documentos (descarga real con cifrado AES)', () => {
 
     expect(res.status).toBe(200);
     expect(buf.toString()).toBe('contenido confidencial del documento');
+    expect(mockRpc).toHaveBeenCalledWith('send', expect.objectContaining({
+      message: expect.objectContaining({ evento: 'Acceso', accion: 'Descargó contrato.pdf', documento_id: 'doc-1' }),
+    }));
+    expect(JSON.stringify(mockRpc.mock.calls)).not.toContain(userKey);
   });
 
   it('devuelve 403 si la clave de descifrado es incorrecta', async () => {
@@ -174,10 +188,13 @@ describe('GET /api/documentos (descarga real con cifrado AES)', () => {
     mockClient.from.mockReturnValueOnce(queryResult({ data: { clave_cifrada: claveCifrada }, error: null }));
 
     const req = new NextRequest('http://localhost:3002/api?id=doc-1', {
-      headers: { ...authHeaders(), 'x-user-key': 'clave-incorrecta' },
+      headers: { ...authHeaders(), 'x-user-key': 'clave-incorrecta', 'x-forwarded-for': '200.55.12.5' },
     });
     const res = await GET(req);
     expect(res.status).toBe(403);
+    expect(mockRpc).toHaveBeenCalledWith('send', expect.objectContaining({
+      message: expect.objectContaining({ evento: 'Seguridad', ip: '200.55.12.5', documento_id: 'doc-1' }),
+    }));
   });
 
   it('devuelve 403 si el usuario no es propietario del documento', async () => {
