@@ -12,6 +12,7 @@ El proyecto es un **monorepo pnpm + Turborepo** compuesto por:
 | Usuarios | `apps/usuarios` | 3001 | Microservicio de autenticación y usuarios |
 | Documentos | `apps/documentos` | 3002 | Microservicio de gestión y cifrado de documentos |
 | Facturación | `apps/facturacion` | 3003 | Microservicio de pagos (Mercado Pago) |
+| Auditoría | `apps/auditoria` | 3004 | Consumidor de la cola `audit_events` (Supabase Queues) + API de logs |
 | Utils | `packages/utils` | — | Librería compartida (cifrado AES-256-GCM) |
 
 ## Stack Tecnológico
@@ -50,6 +51,8 @@ FRONTEND_URL
 USUARIOS_API_URL
 DOCUMENTOS_API_URL
 FACTURACION_API_URL
+AUDITORIA_API_URL
+AUDIT_WORKER_SECRET
 MP_ACCESS_TOKEN
 MP_CURRENCY
 MP_BACK_URL
@@ -69,6 +72,7 @@ Esto ejecuta `turbo dev` y levanta todas las apps simultáneamente:
 - Usuarios API: http://localhost:3001
 - Documentos API: http://localhost:3002
 - Facturación API: http://localhost:3003
+- Auditoría API: http://localhost:3004
 
 ## Levantar una App Individual
 
@@ -118,7 +122,7 @@ WorkFolder/
 │   ├── usuarios/        # API usuarios (puerto 3001)
 │   ├── documentos/      # API documentos (puerto 3002)
 │   ├── facturacion/     # API pagos (puerto 3003)
-│   ├── auditoria/       # (pendiente)
+│   ├── auditoria/       # API auditoría + consumidor de cola (puerto 3004)
 │   └── reportes/        # (pendiente)
 ├── packages/
 │   └── utils/           # Librería compartida (@workfolder/utils)
@@ -133,4 +137,5 @@ WorkFolder/
 - [Microservicio Usuarios](apps/usuarios/README.md)
 - [Microservicio Documentos](apps/documentos/README.md)
 - [Microservicio Facturación](apps/facturacion/README.md)
+- [Microservicio Auditoría](apps/auditoria/README.md)
 - [Paquete Utils](packages/utils/README.md)

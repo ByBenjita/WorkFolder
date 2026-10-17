@@ -5,8 +5,9 @@ import type { AdminSection } from '../../types';
 import { panelStyles } from './EnterprisePanel.styles';
 import {
   useHomeSection,
-  MOCK_LOGS,
+  useAuditLogs,
   SECURITY_CHECKS,
+  type AuditLog,
 } from './useEnterprisePanel';
 
 import BovedaPanel       from '../../../../components/boveda/BovedaPanel';
@@ -36,9 +37,31 @@ const Card = ({ children }: { children: React.ReactNode }) => (
   <div className="card">{children}</div>
 );
 
+/** Filas de la tabla de auditoría; muestra un aviso mientras carga, si hay error o si no hay eventos */
+const LogRows = ({ logs, loading, error }: { logs: AuditLog[]; loading: boolean; error: string | null }) => {
+  const aviso = loading ? 'Cargando logs...' : error ? error : logs.length === 0 ? 'Sin eventos registrados aún' : null;
+  if (aviso) return <p style={{ color: '#1e1e1e', textAlign: 'center', padding: '16px 0' }}>{aviso}</p>;
+
+  return (
+    <>
+      {logs.map((log, i) => (
+        <div key={i} className={`log-row ${log.evento === 'Seguridad' ? 'security' : ''}`}>
+          <span className={`log-badge ${log.evento === 'Seguridad' ? 'security' : log.evento !== 'Acceso' ? 'other' : ''}`}>
+            {log.evento}
+          </span>
+          <span className="log-user">{log.usuario}</span>
+          <span className="log-action">{log.accion}</span>
+          <span className="log-ip">{log.ip}</span>
+          <span className="log-date">{log.fecha}</span>
+        </div>
+      ))}
+    </>
+  );
+};
+
 // ── Sección HOME ─────────────────────────────────────────────────
 function HomeSection() {
-  const { logs } = useHomeSection();
+  const { logs, loading, error } = useHomeSection();
 
   return (
     <div>
@@ -58,19 +81,7 @@ function HomeSection() {
           <div className="log-header">
             <span>Evento</span><span>Usuario</span><span>Acción</span><span>IP</span><span>Fecha</span>
           </div>
-          {logs.length === 0 ? (
-            <p style={{ color: '#1e1e1e', textAlign: 'center', padding: '16px 0' }}>Cargando logs...</p>
-          ) : logs.map((log, i) => (
-            <div key={i} className={`log-row ${log.evento === 'Seguridad' ? 'security' : ''}`}>
-              <span className={`log-badge ${log.evento === 'Seguridad' ? 'security' : log.evento !== 'Acceso' ? 'other' : ''}`}>
-                {log.evento}
-              </span>
-              <span className="log-user">{log.usuario}</span>
-              <span className="log-action">{log.accion}</span>
-              <span className="log-ip">{log.ip}</span>
-              <span className="log-date">{log.fecha}</span>
-            </div>
-          ))}
+          <LogRows logs={logs} loading={loading} error={error} />
         </div>
       </Card>
 
@@ -133,6 +144,8 @@ function SeguridadSection() {
 
 // ── Sección AUDITORÍA ────────────────────────────────────────────
 function AuditoriaSection() {
+  const { logs, loading, error } = useAuditLogs(100);
+
   return (
     <div>
       <SectionTitle>Auditoría Live</SectionTitle>
@@ -142,17 +155,10 @@ function AuditoriaSection() {
           <h3 className="card-title">Registro completo de eventos</h3>
         </div>
         <div className="terminal">
-          {[...MOCK_LOGS, ...MOCK_LOGS].map((log, i) => (
-            <div key={i} className={`log-row ${log.evento === 'Seguridad' ? 'security' : ''}`}>
-              <span className={`log-badge ${log.evento === 'Seguridad' ? 'security' : log.evento !== 'Acceso' ? 'other' : ''}`}>
-                {log.evento}
-              </span>
-              <span className="log-user">{log.usuario}</span>
-              <span className="log-action">{log.accion}</span>
-              <span className="log-ip">{log.ip}</span>
-              <span className="log-date">{log.fecha}</span>
-            </div>
-          ))}
+          <div className="log-header">
+            <span>Evento</span><span>Usuario</span><span>Acción</span><span>IP</span><span>Fecha</span>
+          </div>
+          <LogRows logs={logs} loading={loading} error={error} />
         </div>
       </Card>
     </div>
