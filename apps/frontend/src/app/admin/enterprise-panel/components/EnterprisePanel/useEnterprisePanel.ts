@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { getAuditLogs, type AuditRecord } from '@/services/auditoriaService';
 
 // ── Tipos ────────────────────────────────────────────────────────
 export interface AuditLog {
@@ -39,13 +40,6 @@ export interface RRHHReceptor {
 }
 
 // ── Datos ────────────────────────────────────────────────────────
-export const MOCK_LOGS: AuditLog[] = [
-  { evento: 'Acceso',       usuario: 'Maria Soto (RRHH)', accion: 'Ver Liquidación',         ip: '192.168.1.45', fecha: '13:54:10' },
-  { evento: 'Subida',       usuario: 'Admin Corp',        accion: 'Planos V2.dwg',           ip: '200.55.12.5',  fecha: '13:50:05' },
-  { evento: 'Seguridad',    usuario: 'User 2',            accion: 'Intento descarga sin MFA', ip: '158.10.4.2',   fecha: '11:45:22' },
-  { evento: 'Modificación', usuario: 'Admin Corp',        accion: 'Permisos RRHH',           ip: '200.55.12.5',  fecha: '11:30:00' },
-];
-
 export const CORP_USERS: CorpUser[] = [
   { name: 'Admin Corp',   email: 'admin@empresa.cl',  role: 'Administrador', status: 'activo'   },
   { name: 'Maria Soto',   email: 'maria@empresa.cl',  role: 'RRHH',          status: 'activo'   },
@@ -85,14 +79,43 @@ export const RRHH_RECEPTORS: RRHHReceptor[] = [
 
 // ── Hooks por sección ────────────────────────────────────────────
 
-/** Hook para la sección Home: carga asíncrona de logs */
-export const useHomeSection = () => {
-  const [logs, setLogs] = useState<AuditLog[]>([]);
+/** Convierte un registro del microservicio de auditoría al formato de la tabla */
+export const toAuditLog = (r: AuditRecord): AuditLog => ({
+  evento:  r.evento,
+  usuario: r.user_email ?? r.user_id ?? 'Sistema',
+  accion:  r.accion,
+  ip:      r.ip ?? '—',
+  fecha:   new Date(r.ocurrido_en).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'medium' }),
+});
+
+/**
+ * Logs reales desde apps/auditoria (alimentado por la cola audit_events).
+ * Se refresca cada `intervaloMs` para el efecto "Live".
+ */
+export const useAuditLogs = (limit = 20, intervaloMs = 10000) => {
+  const [logs, setLogs]       = useState<AuditLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+
+  const cargar = useCallback(async () => {
+    const res = await getAuditLogs({ limit });
+    if (res.success) {
+      setLogs((res.data ?? []).map(toAuditLog));
+      setError(null);
+    } else {
+      setError(res.message ?? 'Error obteniendo la auditoría');
+    }
+    setLoading(false);
+  }, [limit]);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLogs(MOCK_LOGS), 400);
-    return () => clearTimeout(timer);
-  }, []);
+    cargar();
+    const timer = setInterval(cargar, intervaloMs);
+    return () => clearInterval(timer);
+  }, [cargar, intervaloMs]);
 
-  return { logs };
+  return { logs, loading, error };
 };
+
+/** Hook para la sección Home: últimos eventos de auditoría */
+export const useHomeSection = () => useAuditLogs(8);
