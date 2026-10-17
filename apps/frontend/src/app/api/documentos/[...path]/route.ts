@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const DOCUMENTOS_API_URL = process.env.DOCUMENTOS_API_URL ?? 'http://localhost:3002';
 
+/**
+ * Reenvía la petición al microservicio de documentos (BFF).
+ * Propaga Authorization, x-user-key e IP del cliente; devuelve JSON o el archivo binario tal cual.
+ */
 const proxyToDocumentos = async (req: NextRequest, method: string) => {
   try {
     const { search } = new URL(req.url);
@@ -16,6 +20,10 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
     // Reenviar x-user-key para descarga
     const userKey = req.headers.get('x-user-key');
     if (userKey) headers['x-user-key'] = userKey;
+
+    // Reenviar IP del cliente para la auditoría
+    const clientIp = req.headers.get('x-forwarded-for') ?? req.ip;
+    if (clientIp) headers['x-forwarded-for'] = clientIp;
 
     const options: RequestInit = { method, headers };
 
@@ -53,6 +61,7 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
   }
 };
 
+// Handlers HTTP: cada método delega en el proxy
 export async function GET(req: NextRequest)    { return proxyToDocumentos(req, 'GET');    }
 export async function POST(req: NextRequest)   { return proxyToDocumentos(req, 'POST');   }
 export async function DELETE(req: NextRequest) { return proxyToDocumentos(req, 'DELETE'); }

@@ -39,4 +39,9 @@ Thumbs.db
 *.sw?
 
 # ─── Vercel / Despliegues ──────────────────────────────────────
-.vercelapps/*/coverage/
+.vercel
+apps/*/coverage/
+
+# ─── Reglas locales de Claude (no subir) ───────────────────────
+CLAUDE.md
+.claude/

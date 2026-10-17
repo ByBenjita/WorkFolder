@@ -1,10 +1,8 @@
-
-
-
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { encryptBuffer, decryptBuffer } from '@workfolder/utils';
 import * as crypto from 'crypto';
+import { logEvent, getClientIp } from '../../lib/audit';
 
 // ── Configuración ────────────────────────────────────────────────
 const supabase = createClient(
@@ -139,6 +137,15 @@ export async function POST(req: NextRequest) {
 
     if (dbError) throw dbError;
 
+    await logEvent(supabase, {
+      evento:       'Subida',
+      accion:       `Subió ${file.name}`,
+      user_id:      userId,
+      documento_id: data?.id ?? null,
+      ip:           getClientIp(req),
+      metadata:     { tamano_bytes: file.size, tipo_mime: file.type },
+    });
+
     return NextResponse.json({ success: true, data });
 
   } catch (err: any) {
@@ -165,7 +172,16 @@ export async function GET(req: NextRequest) {
       }
 
       const hasAccess = await validateDocumentOwnership(documentId, authUserId);
-      if (!hasAccess) return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
+      if (!hasAccess) {
+        await logEvent(supabase, {
+          evento:       'Seguridad',
+          accion:       'Intento de descarga de documento ajeno',
+          user_id:      authUserId,
+          documento_id: documentId,
+          ip:           getClientIp(req),
+        });
+        return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
+      }
 
       // Obtener metadata con clave cifrada
       const { data: meta, error: metaError } = await supabase
@@ -185,6 +201,13 @@ export async function GET(req: NextRequest) {
       }
 
       if (storedKey !== userKey) {
+        await logEvent(supabase, {
+          evento:       'Seguridad',
+          accion:       `Clave incorrecta al descargar ${meta.nombre_original}`,
+          user_id:      authUserId,
+          documento_id: documentId,
+          ip:           getClientIp(req),
+        });
         return NextResponse.json({ error: 'Clave incorrecta' }, { status: 403 });
       }
 
@@ -199,6 +222,14 @@ export async function GET(req: NextRequest) {
       const encryptedBuffer = Buffer.from(await fileData.arrayBuffer());
       const decryptedBuffer = decryptBuffer(encryptedBuffer, userKey);
       const uint8Array      = new Uint8Array(decryptedBuffer);
+
+      await logEvent(supabase, {
+        evento:       'Acceso',
+        accion:       `Descargó ${meta.nombre_original}`,
+        user_id:      authUserId,
+        documento_id: documentId,
+        ip:           getClientIp(req),
+      });
 
       return new NextResponse(uint8Array, {
         headers: {
@@ -248,6 +279,14 @@ export async function GET(req: NextRequest) {
         ...d,
         user_email: userEmailMap[d.user_id] || d.user_id,
       }));
+
+      await logEvent(supabase, {
+        evento:   'Acceso',
+        accion:   'Listó todos los documentos de la bóveda (admin)',
+        user_id:  authUserId,
+        ip:       getClientIp(req),
+        metadata: { total: enriched.length },
+      });
 
       return NextResponse.json({ data: enriched });
     }
@@ -305,6 +344,13 @@ export async function PATCH(req: NextRequest) {
         code: mfaCode,
       });
       if (mfaError) {
+        await logEvent(supabase, {
+          evento:       'Seguridad',
+          accion:       'Código 2FA incorrecto al cambiar clave de documento',
+          user_id:      userId,
+          documento_id: documentId,
+          ip:           getClientIp(req),
+        });
         return NextResponse.json({ error: 'Código 2FA incorrecto o expirado' }, { status: 401 });
       }
     }
@@ -370,6 +416,17 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Error actualizando la clave en base de datos' }, { status: 500 });
     }
 
+    await logEvent(supabase, {
+      evento:       'Modificación',
+      accion:       adminOverride
+        ? `Cambió la clave de ${meta.nombre_original} (override admin)`
+        : `Cambió la clave de ${meta.nombre_original}`,
+      user_id:      userId,
+      documento_id: documentId,
+      ip:           getClientIp(req),
+      metadata:     { admin_override: Boolean(adminOverride) },
+    });
+
     return NextResponse.json({ success: true, message: 'Clave actualizada correctamente' });
 
   } catch (err: any) {
@@ -394,7 +451,7 @@ export async function DELETE(req: NextRequest) {
 
     const { data: meta, error: metaError } = await supabase
       .from('documentos_metadata')
-      .select('ruta_storage')
+      .select('ruta_storage, nombre_original')
       .eq('id', documentId)
       .single();
 
@@ -408,6 +465,14 @@ export async function DELETE(req: NextRequest) {
       .eq('id', documentId);
 
     if (dbError) return NextResponse.json({ error: 'Error eliminando documento' }, { status: 500 });
+
+    await logEvent(supabase, {
+      evento:       'Eliminación',
+      accion:       `Eliminó ${meta.nombre_original ?? documentId}`,
+      user_id:      userId,
+      documento_id: documentId,
+      ip:           getClientIp(req),
+    });
 
     return NextResponse.json({ success: true, message: 'Documento eliminado correctamente' });
 
