@@ -10,6 +10,7 @@ export default defineConfig({
       SUPABASE_ANON_KEY: 'anon-test-key',
       SUPABASE_SERVICE_ROLE_KEY: 'service-test-key',
       MP_ACCESS_TOKEN: 'TEST-fake-token',
+      MP_SANDBOX: 'true',
       MP_CURRENCY: 'USD',
       FRONTEND_URL: 'http://localhost:3000',
     },
