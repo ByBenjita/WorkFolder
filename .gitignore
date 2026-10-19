@@ -9,7 +9,8 @@ build/
 
 # ─── Node.js / TypeScript (Backend y Packages) ─────────────────
 dist/
-.tsbuildinfo
+*.tsbuildinfo
+.turbo/
 
 # ─── Variables de Entorno (¡CRÍTICO PARA SEGURIDAD!) ───────────
 .env

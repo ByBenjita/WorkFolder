@@ -14,9 +14,11 @@
     "AUDIT_WORKER_SECRET",
     "AUDIT_POLL_MS",
     "AUDIT_POLLER",
+    "INTERNAL_PROXY_SECRET",
     "MP_ACCESS_TOKEN",
     "MP_CURRENCY",
-    "MP_BACK_URL"
+    "MP_BACK_URL",
+    "MP_SANDBOX"
   ],
   "tasks": {
     "build": {
