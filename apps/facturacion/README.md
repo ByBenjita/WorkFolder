@@ -27,12 +27,13 @@ SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 FRONTEND_URL=http://localhost:3000
 
 # Mercado Pago
-MP_ACCESS_TOKEN=TEST-<tu-access-token>   # Usar TEST- para sandbox
+MP_ACCESS_TOKEN=<tu-access-token>        # De "Credenciales de prueba" para sandbox
+MP_SANDBOX=true                          # true habilita /api/pago/simular; false en producción real
 MP_CURRENCY=CLP
 MP_BACK_URL=http://localhost:3000/admin/enterprise-panel
 ```
 
-> Para pruebas, usa el `MP_ACCESS_TOKEN` que empiece con `TEST-`. Las credenciales de producción empiezan con `APP_USR-`.
+> Para pruebas, usa el Access Token de **Credenciales de prueba** y `MP_SANDBOX=true`. Las credenciales de prueba nuevas también empiezan con `APP_USR-`, por eso el modo sandbox se define con `MP_SANDBOX` y no por el prefijo del token.
 
 ## Instalación
 
@@ -92,7 +93,7 @@ Los tests se encuentran en `src/__tests__/`.
 
 ## Modo Sandbox
 
-Para probar pagos sin dinero real, usa el `MP_ACCESS_TOKEN` de tipo `TEST-`. Mercado Pago provee tarjetas de prueba en su documentación oficial.
+Para probar pagos sin dinero real, usa el Access Token de **Credenciales de prueba** con `MP_SANDBOX=true`. Mercado Pago provee tarjetas de prueba en su documentación oficial.
 
 ## Estructura
 

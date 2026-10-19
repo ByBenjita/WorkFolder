@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { logEvent, getClientIp, AUDIT_QUEUE } from '../lib/audit';
 
@@ -46,6 +46,24 @@ describe('lib/audit — logEvent', () => {
 });
 
 describe('lib/audit — getClientIp', () => {
+  const BFF = { 'x-client-ip': '190.5.5.5', 'x-forwarded-for': '100.48.64.118' };
+
+  afterEach(() => { delete process.env.INTERNAL_PROXY_SECRET; });
+
+  it('usa x-client-ip cuando el BFF envía el secreto interno correcto', () => {
+    process.env.INTERNAL_PROXY_SECRET = 'secreto-bff';
+    const req = new NextRequest('http://localhost/api', { headers: { ...BFF, 'x-internal-secret': 'secreto-bff' } });
+    expect(getClientIp(req)).toBe('190.5.5.5');
+  });
+
+  it('ignora x-client-ip si el secreto es incorrecto o no está configurado', () => {
+    const falso = new NextRequest('http://localhost/api', { headers: { ...BFF, 'x-internal-secret': 'adivinado' } });
+    expect(getClientIp(falso)).toBe('100.48.64.118');
+
+    process.env.INTERNAL_PROXY_SECRET = 'secreto-bff';
+    expect(getClientIp(falso)).toBe('100.48.64.118');
+  });
+
   it('toma la primera IP de x-forwarded-for', () => {
     const req = new NextRequest('http://localhost/api', { headers: { 'x-forwarded-for': '200.1.1.1, 10.0.0.1' } });
     expect(getClientIp(req)).toBe('200.1.1.1');

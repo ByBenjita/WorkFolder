@@ -220,6 +220,15 @@ export const panelStyles = css.global`
 
   .log-row.security { color: oklch(0.72 0.15 22); }
 
+  /* Aviso de la terminal (cargando / sin eventos / error) */
+  .log-aviso {
+    color: oklch(0.80 0.06 240);
+    text-align: center;
+    padding: 16px 0;
+  }
+
+  .log-aviso.security { color: oklch(0.72 0.15 22); }
+
   .log-badge {
     background-color: oklch(0.55 0.17 256 / 0.20);
     padding: 2px 7px;

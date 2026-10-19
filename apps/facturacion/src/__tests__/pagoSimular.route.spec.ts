@@ -32,14 +32,14 @@ beforeEach(() => {
 });
 
 describe('POST /api/pago/simular', () => {
-  it('rechaza con 403 si MP_ACCESS_TOKEN no es de sandbox (no empieza con TEST-)', async () => {
-    const original = process.env.MP_ACCESS_TOKEN;
-    process.env.MP_ACCESS_TOKEN = 'APP_USR-produccion-real';
+  it('rechaza con 403 si MP_SANDBOX no es "true"', async () => {
+    const original = process.env.MP_SANDBOX;
+    process.env.MP_SANDBOX = 'false';
 
     const res = await POST(jsonReq({ plan_id: 'business' }));
     expect(res.status).toBe(403);
 
-    process.env.MP_ACCESS_TOKEN = original;
+    process.env.MP_SANDBOX = original;
   });
 
   it('devuelve 401 sin token (en sandbox)', async () => {
