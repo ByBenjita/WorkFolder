@@ -94,7 +94,10 @@ export async function POST(req: NextRequest) {
     .from(BUCKET)
     .upload(storagePath, buffer, { contentType: file.type, upsert: false });
 
-  if (uploadError) return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  if (uploadError) {
+    console.error('[rrhh] Error subiendo a Storage:', uploadError.message);
+    return NextResponse.json({ error: 'Error al subir el documento' }, { status: 500 });
+  }
 
   const { data, error } = await supabase
     .from('rrhh_documentos')
@@ -114,7 +117,8 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     await supabase.storage.from(BUCKET).remove([storagePath]);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('[rrhh] Error registrando el documento:', error.message);
+    return NextResponse.json({ error: 'Error al registrar el documento' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true, data }, { status: 201 });
@@ -142,7 +146,10 @@ export async function DELETE(req: NextRequest) {
   await supabase.storage.from(BUCKET).remove([doc.storage_path]);
 
   const { error } = await supabase.from('rrhh_documentos').delete().eq('id', id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[rrhh] Error eliminando el documento:', error.message);
+    return NextResponse.json({ error: 'Error al eliminar el documento' }, { status: 500 });
+  }
 
   return NextResponse.json({ success: true });
 }

@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     console.error('POST error:', err);
-    return NextResponse.json({ error: err.message || 'Error al subir documento' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al subir documento' }, { status: 500 });
   }
 }
 
@@ -280,14 +280,6 @@ export async function GET(req: NextRequest) {
         user_email: userEmailMap[d.user_id] || d.user_id,
       }));
 
-      await logEvent(supabase, {
-        evento:   'Acceso',
-        accion:   'Listó todos los documentos de la bóveda (admin)',
-        user_id:  authUserId,
-        ip:       getClientIp(req),
-        metadata: { total: enriched.length },
-      });
-
       return NextResponse.json({ data: enriched });
     }
 
@@ -295,7 +287,7 @@ export async function GET(req: NextRequest) {
 
   } catch (err: any) {
     console.error('GET error:', err);
-    return NextResponse.json({ error: err.message || 'Error en la solicitud' }, { status: 500 });
+    return NextResponse.json({ error: 'Error en la solicitud' }, { status: 500 });
   }
 }
 
@@ -376,9 +368,10 @@ export async function PATCH(req: NextRequest) {
     try {
       currentKey = decryptUserKey(meta.clave_cifrada);
     } catch (decryptErr: any) {
-      console.error('decryptUserKey error:', decryptErr.message, '| formato clave_cifrada:', typeof meta.clave_cifrada, meta.clave_cifrada?.slice(0, 20));
+      // Suele indicar que ENCRYPTION_KEY no es la misma con la que se cifró el documento
+      console.error('decryptUserKey error:', decryptErr.message);
       return NextResponse.json(
-        { error: 'Error al descifrar la clave del documento: ' + decryptErr.message },
+        { error: 'No se pudo descifrar la clave del documento' },
         { status: 500 }
       );
     }
@@ -431,7 +424,7 @@ export async function PATCH(req: NextRequest) {
 
   } catch (err: any) {
     console.error('PATCH error:', err);
-    return NextResponse.json({ error: err.message || 'Error al cambiar la clave' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al cambiar la clave' }, { status: 500 });
   }
 }
 
@@ -478,6 +471,6 @@ export async function DELETE(req: NextRequest) {
 
   } catch (err: any) {
     console.error('DELETE error:', err);
-    return NextResponse.json({ error: err.message || 'Error al eliminar' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al eliminar' }, { status: 500 });
   }
 }
