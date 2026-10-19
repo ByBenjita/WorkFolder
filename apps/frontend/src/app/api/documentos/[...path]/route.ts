@@ -4,7 +4,7 @@ const DOCUMENTOS_API_URL = process.env.DOCUMENTOS_API_URL ?? 'http://localhost:3
 
 /**
  * Reenvía la petición al microservicio de documentos (BFF).
- * Propaga Authorization, x-user-key e IP del cliente; devuelve JSON o el archivo binario tal cual.
+ * Propaga Authorization, x-user-key y la IP del cliente firmada; devuelve JSON o el archivo binario tal cual.
  */
 const proxyToDocumentos = async (req: NextRequest, method: string) => {
   try {
@@ -21,9 +21,14 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
     const userKey = req.headers.get('x-user-key');
     if (userKey) headers['x-user-key'] = userKey;
 
-    // Reenviar IP del cliente para la auditoría
-    const clientIp = req.headers.get('x-forwarded-for') ?? req.ip;
-    if (clientIp) headers['x-forwarded-for'] = clientIp;
+    // IP del cliente para la auditoría (req.ip / x-forwarded-for los fija la plataforma, no el navegador).
+    // Va acompañada del secreto interno: documentos solo confía en x-client-ip si el secreto coincide.
+    const clientIp       = req.ip ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim();
+    const internalSecret = process.env.INTERNAL_PROXY_SECRET;
+    if (clientIp && internalSecret) {
+      headers['x-client-ip']       = clientIp;
+      headers['x-internal-secret'] = internalSecret;
+    }
 
     const options: RequestInit = { method, headers };
 

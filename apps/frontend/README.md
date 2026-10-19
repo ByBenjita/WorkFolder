@@ -22,6 +22,10 @@ USUARIOS_API_URL=http://localhost:3001
 NEXT_PUBLIC_USUARIOS_API_URL=http://localhost:3001
 DOCUMENTOS_API_URL=http://localhost:3002
 FACTURACION_API_URL=http://localhost:3003
+AUDITORIA_API_URL=http://localhost:3004
+
+# Firma la IP del cliente que el BFF envía a documentos (mismo valor en apps/documentos)
+INTERNAL_PROXY_SECRET=<string largo aleatorio>
 
 # Supabase (para autenticación client-side)
 NEXT_PUBLIC_SUPABASE_URL=https://<tu-proyecto>.supabase.co
