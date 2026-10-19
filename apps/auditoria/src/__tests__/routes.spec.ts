@@ -111,6 +111,15 @@ describe('POST /api/procesar', () => {
     expect(mocks.drenarCola).not.toHaveBeenCalled();
   });
 
+  it('401 con un secreto incorrecto (aunque tenga el mismo largo)', async () => {
+    const res = await POST(new NextRequest('http://localhost:3004/api/procesar', {
+      method: 'POST',
+      headers: { 'x-worker-secret': 'worker-test-secreX' },
+    }));
+    expect(res.status).toBe(401);
+    expect(mocks.drenarCola).not.toHaveBeenCalled();
+  });
+
   it('procesa la cola con el secreto correcto', async () => {
     mocks.drenarCola.mockResolvedValue({ leidos: 3, registrados: 3, descartados: 0, fallidos: 0 });
     const res = await POST(new NextRequest('http://localhost:3004/api/procesar', {

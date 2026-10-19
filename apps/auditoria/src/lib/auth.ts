@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { safeEqual } from '@workfolder/utils';
 import { supabaseAdmin } from '@/services/supabase';
 
 export interface AuditViewer {
@@ -27,9 +28,10 @@ export async function getAuditViewer(req: NextRequest): Promise<{ viewer?: Audit
   return { viewer: { id: user.id, email: user.email ?? null } };
 }
 
-/** Protege /api/procesar: solo cron o servicios internos con el secreto */
+/** Protege /api/procesar: solo cron o servicios internos con el secreto (comparación en tiempo constante) */
 export function isWorkerAuthorized(req: NextRequest): boolean {
-  const secret = process.env.AUDIT_WORKER_SECRET;
-  if (!secret) return false;
-  return req.headers.get('x-worker-secret') === secret;
+  const secret   = process.env.AUDIT_WORKER_SECRET;
+  const recibido = req.headers.get('x-worker-secret');
+  if (!secret || !recibido) return false;
+  return safeEqual(recibido, secret);
 }
