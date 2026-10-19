@@ -9,3 +9,7 @@ allowBuilds:
   tree-sitter: true
   tree-sitter-json: true
   unrs-resolver: true
+# Fuerza una sola versión de los tipos de React en todo el monorepo
+overrides:
+  '@types/react': ^18.3.0
+  '@types/react-dom': ^18.3.0

@@ -36,6 +36,16 @@ import { decrypt } from '@workfolder/utils'
 const original = decrypt(cifrado, process.env.ENCRYPTION_KEY)
 ```
 
+### `safeEqual(a: string, b: string): boolean`
+
+Compara dos secretos en tiempo constante (sobre su hash SHA-256), para validar headers como `x-worker-secret` sin exponer el secreto a ataques de timing.
+
+```ts
+import { safeEqual } from '@workfolder/utils'
+
+const autorizado = safeEqual(req.headers.get('x-worker-secret') ?? '', process.env.AUDIT_WORKER_SECRET!)
+```
+
 ## Requisitos de la Clave
 
 - La `ENCRYPTION_KEY` debe tener **exactamente 32 caracteres** (256 bits para AES-256).
@@ -47,6 +57,7 @@ const original = decrypt(cifrado, process.env.ENCRYPTION_KEY)
 packages/utils/
 ├── src/
 │   ├── encryption.ts  # Implementación AES-256-GCM
+│   ├── safeEqual.ts   # Comparación de secretos en tiempo constante
 │   └── index.ts       # Exportaciones públicas
 └── package.json
 ```

@@ -221,7 +221,7 @@ export function buildSwaggerSpec(baseUrl: string) {
       '/api/pago/simular': {
         post: {
           tags:     ['Pagos — Mercado Pago'],
-          summary:  'Simular la activación de una suscripción en modo sandbox (solo con credenciales TEST-)',
+          summary:  'Simular la activación de una suscripción en modo sandbox (solo con MP_SANDBOX=true)',
           security: securityBearer,
           requestBody: {
             required: true,
@@ -242,7 +242,7 @@ export function buildSwaggerSpec(baseUrl: string) {
             },
             '400': { description: 'plan_id inválido',                content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
             '401': { description: 'No autorizado o no es administrador', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
-            '403': { description: 'MP_ACCESS_TOKEN no es de sandbox (no empieza con TEST-)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
+            '403': { description: 'El servicio no está en modo sandbox (MP_SANDBOX distinto de true)', content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } } },
           },
         },
       },

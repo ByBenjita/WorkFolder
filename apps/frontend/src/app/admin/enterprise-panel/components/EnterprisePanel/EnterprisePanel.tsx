@@ -37,10 +37,10 @@ const Card = ({ children }: { children: React.ReactNode }) => (
   <div className="card">{children}</div>
 );
 
-/** Filas de la tabla de auditoría; muestra un aviso mientras carga, si hay error o si no hay eventos */
+/** Filas de la tabla de auditoría; muestra un aviso mientras carga, si hay error (en rojo) o si no hay eventos */
 const LogRows = ({ logs, loading, error }: { logs: AuditLog[]; loading: boolean; error: string | null }) => {
   const aviso = loading ? 'Cargando logs...' : error ? error : logs.length === 0 ? 'Sin eventos registrados aún' : null;
-  if (aviso) return <p style={{ color: '#1e1e1e', textAlign: 'center', padding: '16px 0' }}>{aviso}</p>;
+  if (aviso) return <p className={`log-aviso ${error ? 'security' : ''}`}>{aviso}</p>;
 
   return (
     <>

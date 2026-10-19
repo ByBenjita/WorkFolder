@@ -25,6 +25,9 @@ SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 
 # Clave de cifrado AES-256-GCM (exactamente 32 caracteres)
 ENCRYPTION_KEY=mi_clave_secreta_de_32_caracteres_
+
+# Secreto compartido con el frontend (BFF): valida el header x-client-ip para la auditoría
+INTERNAL_PROXY_SECRET=<mismo valor que en apps/frontend>
 ```
 
 > `ENCRYPTION_KEY` debe tener exactamente 32 caracteres para AES-256. No commitear este valor en el repositorio.

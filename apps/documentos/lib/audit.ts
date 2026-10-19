@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { NextRequest } from 'next/server';
+import { safeEqual } from '@workfolder/utils';
 
 // ── Productor de eventos de auditoría (Supabase Queues / pgmq) ────
 // Los eventos se encolan en `audit_events` y los procesa apps/auditoria.
@@ -18,8 +19,18 @@ export interface AuditEvent {
   metadata?:     Record<string, unknown>;
 }
 
-/** IP real del cliente (el BFF reenvía x-forwarded-for) */
+/**
+ * IP real del cliente.
+ * Si la petición viene del BFF con el secreto interno válido, usa `x-client-ip`
+ * (Vercel reemplaza x-forwarded-for por la IP de la función del BFF).
+ * Si no, usa la IP que reporta la plataforma; así nadie puede inyectar una IP falsa.
+ */
 export function getClientIp(req: NextRequest): string | null {
+  const secret   = process.env.INTERNAL_PROXY_SECRET;
+  const recibido = req.headers.get('x-internal-secret');
+  const clientIp = req.headers.get('x-client-ip');
+  if (secret && recibido && clientIp && safeEqual(recibido, secret)) return clientIp.slice(0, 64);
+
   const forwarded = req.headers.get('x-forwarded-for');
   if (forwarded) return forwarded.split(',')[0].trim();
   return req.headers.get('x-real-ip');
