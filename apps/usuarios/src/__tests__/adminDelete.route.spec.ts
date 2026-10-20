@@ -1,12 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const mockClient = vi.hoisted(() => ({
-  auth: {
-    getUser: vi.fn(),
-    admin: { deleteUser: vi.fn() },
-  },
-}));
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn();
+  return {
+    rpc,
+    schema: vi.fn(() => ({ rpc })),
+    auth: {
+      getUser: vi.fn(),
+      admin: { deleteUser: vi.fn(), getUserById: vi.fn() },
+    },
+  };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
+
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -29,6 +38,8 @@ describe('POST /api/admin/delete', () => {
   beforeEach(() => {
     mockClient.auth.getUser.mockReset();
     mockClient.auth.admin.deleteUser.mockReset();
+    mockClient.rpc.mockReset().mockResolvedValue({ error: null });
+    mockClient.auth.admin.getUserById.mockReset().mockResolvedValue({ data: { user: { email: 'colaborador@empresa.cl' } }, error: null });
   });
 
   it('devuelve 401 sin token', async () => {
@@ -72,6 +83,12 @@ describe('POST /api/admin/delete', () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(mockClient.auth.admin.deleteUser).toHaveBeenCalledWith('u2');
+    expect(eventoEncolado()).toMatchObject({
+      evento:   'Eliminación',
+      accion:   'Eliminó el usuario colaborador@empresa.cl',
+      user_id:  'admin-1',
+      metadata: { usuario_afectado: 'u2' },
+    });
   });
 
   it('devuelve 500 si Supabase falla al eliminar', async () => {

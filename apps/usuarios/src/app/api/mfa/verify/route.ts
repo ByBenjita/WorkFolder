@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { getSupabaseForUser } from '@/lib/auth';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -19,7 +20,14 @@ export async function POST(req: NextRequest) {
       code,
     });
 
-    if (error) return err('Código incorrecto o expirado: ' + error.message, 401);
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (error) {
+      await auditar(req, { evento: 'Seguridad', accion: 'Código 2FA incorrecto', user_id: user?.id ?? null });
+      return err('Código incorrecto o expirado', 401);
+    }
+
+    await auditar(req, { evento: 'Acceso', accion: 'Verificó su código 2FA', user_id: user?.id ?? null });
 
     return ok({ message: '2FA verificado correctamente' });
 

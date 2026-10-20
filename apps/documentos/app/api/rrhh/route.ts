@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logEvent } from '@workfolder/utils';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,16 @@ async function getUser(req: NextRequest) {
 async function checkAdmin(userId: string): Promise<boolean> {
   const { data } = await supabase.auth.admin.getUserById(userId);
   return data.user?.app_metadata?.role === 'admin';
+}
+
+/** Registra el intento sin permisos de admin y responde 403 */
+async function denegarNoAdmin(req: NextRequest, userId: string, accion: 'subir' | 'eliminar') {
+  await logEvent(supabase, req, {
+    evento:  'Seguridad',
+    accion:  `Intento de ${accion} documento RRHH sin permisos de administrador`,
+    user_id: userId,
+  });
+  return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 });
 }
 
 // GET /api/rrhh?download=<id> — descarga binaria del archivo
@@ -40,6 +51,12 @@ export async function GET(req: NextRequest) {
 
   if (!doc) return NextResponse.json({ error: 'Documento no encontrado' }, { status: 404 });
   if (!admin && doc.asignado_a !== user.id) {
+    await logEvent(supabase, req, {
+      evento:       'Seguridad',
+      accion:       'Intento de descarga de documento RRHH ajeno',
+      user_id:      user.id,
+      documento_id: doc.id,
+    });
     return NextResponse.json({ error: 'Sin permisos para descargar este documento' }, { status: 403 });
   }
 
@@ -50,6 +67,13 @@ export async function GET(req: NextRequest) {
   if (dlError || !fileData) {
     return NextResponse.json({ error: 'Error al descargar el archivo' }, { status: 500 });
   }
+
+  await logEvent(supabase, req, {
+    evento:       'Acceso',
+    accion:       `Descargó documento RRHH ${doc.nombre_original}`,
+    user_id:      user.id,
+    documento_id: doc.id,
+  });
 
   const buffer = Buffer.from(await fileData.arrayBuffer());
   return new NextResponse(buffer, {
@@ -67,9 +91,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  if (!(await checkAdmin(user.id))) {
-    return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 });
-  }
+  if (!(await checkAdmin(user.id))) return denegarNoAdmin(req, user.id, 'subir');
 
   const form            = await req.formData();
   const file            = form.get('file') as File | null;
@@ -121,6 +143,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Error al registrar el documento' }, { status: 500 });
   }
 
+  await logEvent(supabase, req, {
+    evento:       'Subida',
+    accion:       `Subió documento RRHH ${file.name} para ${asignadoAEmail}`,
+    user_id:      user.id,
+    documento_id: data?.id ?? null,
+    metadata:     { tipo, periodo: periodo || null, tamano_bytes: file.size, asignado_a: asignadoA },
+  });
+
   return NextResponse.json({ success: true, data }, { status: 201 });
 }
 
@@ -128,16 +158,14 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const user = await getUser(req);
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
-  if (!(await checkAdmin(user.id))) {
-    return NextResponse.json({ error: 'Sin permisos de administrador' }, { status: 403 });
-  }
+  if (!(await checkAdmin(user.id))) return denegarNoAdmin(req, user.id, 'eliminar');
 
   const id = req.nextUrl.searchParams.get('id');
   if (!id) return NextResponse.json({ error: 'Falta el id del documento' }, { status: 400 });
 
   const { data: doc } = await supabase
     .from('rrhh_documentos')
-    .select('storage_path')
+    .select('storage_path, nombre_original')
     .eq('id', id)
     .single();
 
@@ -150,6 +178,13 @@ export async function DELETE(req: NextRequest) {
     console.error('[rrhh] Error eliminando el documento:', error.message);
     return NextResponse.json({ error: 'Error al eliminar el documento' }, { status: 500 });
   }
+
+  await logEvent(supabase, req, {
+    evento:       'Eliminación',
+    accion:       `Eliminó documento RRHH ${doc.nombre_original}`,
+    user_id:      user.id,
+    documento_id: id,
+  });
 
   return NextResponse.json({ success: true });
 }

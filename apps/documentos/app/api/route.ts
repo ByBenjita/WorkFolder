@@ -1,8 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { encryptBuffer, decryptBuffer } from '@workfolder/utils';
+import { encryptBuffer, decryptBuffer, logEvent } from '@workfolder/utils';
 import * as crypto from 'crypto';
-import { logEvent, getClientIp } from '../../lib/audit';
 
 // ── Configuración ────────────────────────────────────────────────
 const supabase = createClient(
@@ -137,12 +136,11 @@ export async function POST(req: NextRequest) {
 
     if (dbError) throw dbError;
 
-    await logEvent(supabase, {
+    await logEvent(supabase, req, {
       evento:       'Subida',
       accion:       `Subió ${file.name}`,
       user_id:      userId,
       documento_id: data?.id ?? null,
-      ip:           getClientIp(req),
       metadata:     { tamano_bytes: file.size, tipo_mime: file.type },
     });
 
@@ -173,12 +171,11 @@ export async function GET(req: NextRequest) {
 
       const hasAccess = await validateDocumentOwnership(documentId, authUserId);
       if (!hasAccess) {
-        await logEvent(supabase, {
+        await logEvent(supabase, req, {
           evento:       'Seguridad',
           accion:       'Intento de descarga de documento ajeno',
           user_id:      authUserId,
           documento_id: documentId,
-          ip:           getClientIp(req),
         });
         return NextResponse.json({ error: 'No tienes acceso' }, { status: 403 });
       }
@@ -201,12 +198,11 @@ export async function GET(req: NextRequest) {
       }
 
       if (storedKey !== userKey) {
-        await logEvent(supabase, {
+        await logEvent(supabase, req, {
           evento:       'Seguridad',
           accion:       `Clave incorrecta al descargar ${meta.nombre_original}`,
           user_id:      authUserId,
           documento_id: documentId,
-          ip:           getClientIp(req),
         });
         return NextResponse.json({ error: 'Clave incorrecta' }, { status: 403 });
       }
@@ -223,12 +219,11 @@ export async function GET(req: NextRequest) {
       const decryptedBuffer = decryptBuffer(encryptedBuffer, userKey);
       const uint8Array      = new Uint8Array(decryptedBuffer);
 
-      await logEvent(supabase, {
+      await logEvent(supabase, req, {
         evento:       'Acceso',
         accion:       `Descargó ${meta.nombre_original}`,
         user_id:      authUserId,
         documento_id: documentId,
-        ip:           getClientIp(req),
       });
 
       return new NextResponse(uint8Array, {
@@ -336,12 +331,11 @@ export async function PATCH(req: NextRequest) {
         code: mfaCode,
       });
       if (mfaError) {
-        await logEvent(supabase, {
+        await logEvent(supabase, req, {
           evento:       'Seguridad',
           accion:       'Código 2FA incorrecto al cambiar clave de documento',
           user_id:      userId,
           documento_id: documentId,
-          ip:           getClientIp(req),
         });
         return NextResponse.json({ error: 'Código 2FA incorrecto o expirado' }, { status: 401 });
       }
@@ -409,14 +403,13 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Error actualizando la clave en base de datos' }, { status: 500 });
     }
 
-    await logEvent(supabase, {
+    await logEvent(supabase, req, {
       evento:       'Modificación',
       accion:       adminOverride
         ? `Cambió la clave de ${meta.nombre_original} (override admin)`
         : `Cambió la clave de ${meta.nombre_original}`,
       user_id:      userId,
       documento_id: documentId,
-      ip:           getClientIp(req),
       metadata:     { admin_override: Boolean(adminOverride) },
     });
 
@@ -459,12 +452,11 @@ export async function DELETE(req: NextRequest) {
 
     if (dbError) return NextResponse.json({ error: 'Error eliminando documento' }, { status: 500 });
 
-    await logEvent(supabase, {
+    await logEvent(supabase, req, {
       evento:       'Eliminación',
       accion:       `Eliminó ${meta.nombre_original ?? documentId}`,
       user_id:      userId,
       documento_id: documentId,
-      ip:           getClientIp(req),
     });
 
     return NextResponse.json({ success: true, message: 'Documento eliminado correctamente' });

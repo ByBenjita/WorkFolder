@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { agregarIpFirmada } from '@/app/api/ipFirmada';
 
 const DOCUMENTOS_API_URL = process.env.DOCUMENTOS_API_URL ?? 'http://localhost:3002';
 
@@ -21,14 +22,8 @@ const proxyToDocumentos = async (req: NextRequest, method: string) => {
     const userKey = req.headers.get('x-user-key');
     if (userKey) headers['x-user-key'] = userKey;
 
-    // IP del cliente para la auditoría (req.ip / x-forwarded-for los fija la plataforma, no el navegador).
-    // Va acompañada del secreto interno: documentos solo confía en x-client-ip si el secreto coincide.
-    const clientIp       = req.ip ?? req.headers.get('x-forwarded-for')?.split(',')[0].trim();
-    const internalSecret = process.env.INTERNAL_PROXY_SECRET;
-    if (clientIp && internalSecret) {
-      headers['x-client-ip']       = clientIp;
-      headers['x-internal-secret'] = internalSecret;
-    }
+    // IP del cliente firmada, para la auditoría
+    agregarIpFirmada(req, headers);
 
     const options: RequestInit = { method, headers };
 

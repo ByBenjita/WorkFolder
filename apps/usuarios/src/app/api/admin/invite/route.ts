@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar, denegarNoAdmin } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !user) return err('No autorizado', 401);
-    if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
+    if (user.app_metadata?.role !== 'admin') return denegarNoAdmin(req, user.id, 'crear usuario');
 
     const { email, password, level, permissions, fullName } = await req.json();
     if (!email || !password) return err('email y password son requeridos', 400);
@@ -35,11 +36,22 @@ export async function POST(req: NextRequest) {
       user_metadata: { full_name: fullName ?? null },
     });
 
-    if (createError) return err('Error al crear usuario: ' + createError.message, 500);
+    if (createError) {
+      console.error('[admin/invite]', createError.message);
+      return err('Error al crear usuario', 500);
+    }
+
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Creó el usuario ${data.user?.email ?? email}`,
+      user_id:  user.id,
+      metadata: { usuario_afectado: data.user?.id ?? null, nivel: appMeta.level, es_admin: appMeta.role === 'admin' },
+    });
 
     return ok({ message: `Usuario ${data.user?.email} creado correctamente.`, userId: data.user?.id });
 
   } catch (e: any) {
-    return err('Error interno: ' + e.message, 500);
+    console.error('[admin/invite]', e?.message ?? e);
+    return err('Error interno del servidor', 500);
   }
 }

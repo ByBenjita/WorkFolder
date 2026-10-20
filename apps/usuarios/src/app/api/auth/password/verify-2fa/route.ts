@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -20,12 +21,15 @@ export async function POST(req: NextRequest) {
     );
 
     // Establecer sesión con los tokens del link de recuperación
-    const { error: sessionError } = await supabase.auth.setSession({
+    const { data: sessionInfo, error: sessionError } = await supabase.auth.setSession({
       access_token:  accessToken,
       refresh_token: refresh_token,
     });
 
-    if (sessionError) return err('Sesión inválida: ' + sessionError.message, 401);
+    if (sessionError) {
+      console.error('[verify-2fa-reset] setSession:', sessionError.message);
+      return err('Sesión inválida', 401);
+    }
 
     // Obtener el factor verificado del usuario
     const { data: mfaData } = await supabase.auth.mfa.listFactors();
@@ -42,7 +46,14 @@ export async function POST(req: NextRequest) {
       code,
     });
 
-    if (mfaError) return err('Código incorrecto o expirado', 401);
+    if (mfaError) {
+      await auditar(req, {
+        evento:  'Seguridad',
+        accion:  'Código 2FA incorrecto al recuperar la contraseña',
+        user_id: sessionInfo?.user?.id ?? null,
+      });
+      return err('Código incorrecto o expirado', 401);
+    }
 
     // Devolver el nuevo token AAL2
     const { data: sessionData } = await supabase.auth.getSession();

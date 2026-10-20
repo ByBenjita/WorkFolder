@@ -92,6 +92,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
+      '@workfolder/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       mercadopago:
         specifier: ^2.4.3
         version: 2.13.0
@@ -193,6 +196,9 @@ importers:
       '@supabase/supabase-js':
         specifier: ^2.105.4
         version: 2.105.4
+      '@workfolder/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       next:
         specifier: 14.1.0
         version: 14.1.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -233,6 +239,9 @@ importers:
       typescript:
         specifier: latest
         version: 7.0.2
+      vitest:
+        specifier: ^4.1.8
+        version: 4.1.8(@types/node@26.6.5)(@vitest/coverage-v8@4.1.8)(@vitest/ui@4.1.8)(jsdom@29.1.1)(vite@8.0.16(@types/node@26.6.5))
 
 packages:
 

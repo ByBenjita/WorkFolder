@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { PreApproval } from 'mercadopago';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 import { getSupabaseForUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/services/supabase';
 import { getMpClient } from '@/lib/mercadopago';
@@ -68,6 +69,13 @@ export async function GET(req: NextRequest) {
           fecha_proximo_cobro: fechaProximoCobro.toISOString(),
         });
     }
+
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Suscripción al plan ${planId} activada (sincronizada con Mercado Pago)`,
+      user_id:  user.id,
+      metadata: { plan_id: planId, preapproval_id: preapprovalId },
+    });
 
     return ok({ sincronizado: true, plan_id: planId, estado: 'activo' });
   } catch (e) {

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { supabase } from '@/services/supabase';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -21,7 +22,13 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('[login] Error Supabase:', error.message);
-      return err('Credenciales incorrectas: ' + error.message, 401);
+      await auditar(req, {
+        evento:   'Seguridad',
+        accion:   'Inicio de sesión fallido',
+        user_id:  null,
+        metadata: { email: String(email).slice(0, 254), motivo: error.code ?? null },
+      });
+      return err('Credenciales incorrectas', 401);
     }
 
     if (!data.session) {
@@ -46,6 +53,13 @@ export async function POST(req: NextRequest) {
       (f: { factor_type: string; status: string }) =>
         f.factor_type === 'totp' && f.status === 'verified'
     ) ?? false;
+
+    await auditar(req, {
+      evento:   'Acceso',
+      accion:   'Inició sesión',
+      user_id:  data.user?.id ?? null,
+      metadata: { mfa_configurado: hasVerifiedMFA },
+    });
 
     return ok({
       access_token:  data.session.access_token,

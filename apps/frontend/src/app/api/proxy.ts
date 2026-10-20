@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { agregarIpFirmada } from '@/app/api/ipFirmada';
 
 const USUARIOS_API_URL = process.env.USUARIOS_API_URL ?? 'http://localhost:3001';
-// Log para verificar que la variable de entorno se está leyendo correctamente
-console.log('[proxy] USUARIOS_API_URL:', USUARIOS_API_URL);
 
 /**
- * Reenvía el request al microservicio de usuarios
+ * Reenvía el request al microservicio de usuarios (con la IP del cliente firmada)
  * y devuelve la respuesta al cliente.
  */
 export const proxyToUsuarios = async (
@@ -21,6 +20,9 @@ export const proxyToUsuarios = async (
     // Reenviar el Authorization header si existe
     const auth = req.headers.get('Authorization');
     if (auth) headers['Authorization'] = auth;
+
+    // IP del cliente firmada, para la auditoría
+    agregarIpFirmada(req, headers);
 
     const options: RequestInit = { method, headers };
 

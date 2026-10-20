@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
 
     const { data, error } = await supabase.auth.mfa.listFactors();
 
-    if (error) return err('Error al obtener factores: ' + error.message);
+    if (error) {
+      console.error('[mfa/factor]', error.message);
+      return err('Error al obtener factores');
+    }
 
     const verifiedFactor = data?.all?.find(
       (f: { factor_type: string; status: string; id: string }) =>

@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { PreApproval, Payment } from 'mercadopago';
 import { getMpClient } from '@/lib/mercadopago';
 import { supabaseAdmin } from '@/services/supabase';
+import { auditar } from '@/lib/audit';
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,9 +10,9 @@ export async function POST(req: NextRequest) {
     const { type, data } = body as { type: string; data?: { id?: unknown } };
 
     if (type === 'subscription_preapproval' && data?.id) {
-      await sincronizarPreapproval(String(data.id));
+      await sincronizarPreapproval(req, String(data.id));
     } else if (type === 'payment' && data?.id) {
-      await registrarPago(String(data.id));
+      await registrarPago(req, String(data.id));
     }
 
     return new Response(null, { status: 200 });
@@ -21,7 +22,8 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function sincronizarPreapproval(preapprovalId: string) {
+/** Activa o actualiza la suscripción cuando Mercado Pago autoriza la preaprobación */
+async function sincronizarPreapproval(req: NextRequest, preapprovalId: string) {
   const preApproval = new PreApproval(getMpClient());
   const sub = await preApproval.get({ id: preapprovalId });
 
@@ -61,9 +63,17 @@ async function sincronizarPreapproval(preapprovalId: string) {
         fecha_proximo_cobro: fechaProximoCobro.toISOString(),
       });
   }
+
+  await auditar(req, {
+    evento:   'Modificación',
+    accion:   `Suscripción al plan ${planId} activada por Mercado Pago`,
+    user_id:  adminId,
+    metadata: { plan_id: planId, preapproval_id: preapprovalId },
+  });
 }
 
-async function registrarPago(paymentId: string) {
+/** Registra la factura de un pago aprobado por Mercado Pago */
+async function registrarPago(req: NextRequest, paymentId: string) {
   const payment = new Payment(getMpClient());
   const pago = await payment.get({ id: paymentId });
 
@@ -90,5 +100,12 @@ async function registrarPago(paymentId: string) {
     periodo_inicio: ahora.toISOString().slice(0, 10),
     periodo_fin: periodoFin.toISOString().slice(0, 10),
     mp_payment_id: String(paymentId),
+  });
+
+  await auditar(req, {
+    evento:   'Modificación',
+    accion:   `Pago aprobado de ${pago.transaction_amount ?? 0} ${pago.currency_id ?? ''} vía Mercado Pago`,
+    user_id:  adminId,
+    metadata: { payment_id: String(paymentId), suscripcion_id: suscripcion.id },
   });
 }

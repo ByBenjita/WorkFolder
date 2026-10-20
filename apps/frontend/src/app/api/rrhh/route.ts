@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { agregarIpFirmada } from '@/app/api/ipFirmada';
 
 const USUARIOS_URL   = process.env.USUARIOS_API_URL   ?? 'http://localhost:3001';
 const DOCUMENTOS_URL = process.env.DOCUMENTOS_API_URL ?? 'http://localhost:3002';
 
+/** Reenvía la petición RRHH a usuarios o documentos según la operación */
 async function proxy(req: NextRequest, method: string, baseUrl: string) {
   try {
     const { search } = new URL(req.url);
@@ -11,6 +13,9 @@ async function proxy(req: NextRequest, method: string, baseUrl: string) {
     const headers: Record<string, string> = {};
     const auth = req.headers.get('Authorization');
     if (auth) headers['Authorization'] = auth;
+
+    // IP del cliente firmada, para la auditoría
+    agregarIpFirmada(req, headers);
 
     const options: RequestInit = { method, headers };
 

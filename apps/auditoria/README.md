@@ -5,7 +5,7 @@ Consume la cola `audit_events` de **Supabase Queues (pgmq)** y guarda cada event
 | | |
 |---|---|
 | Puerto | `3004` |
-| Productores | `apps/documentos` (subida, descarga, cambio de clave, eliminación, eventos de seguridad) |
+| Productores | `apps/documentos` (bóveda y RRHH: subida, descarga, cambio de clave, eliminación), `apps/usuarios` (login, logout, 2FA, recuperación de contraseña, administración de usuarios, firma RRHH), `apps/facturacion` (cambio de plan, pagos, activación de suscripción) y los intentos sin permisos (`Seguridad`) |
 | Tabla | `public.audit_log` (sin UPDATE/DELETE/TRUNCATE) |
 
 ## Flujo
@@ -16,7 +16,7 @@ documentos ──pgmq_public.send──▶ [audit_events] ──read──▶ au
                                         └──── archive ◀───────┘
 ```
 
-1. `apps/documentos` encola el evento con `logEvent()` (nunca falla la operación principal).
+1. Cada productor encola el evento con `logEvent()` de `@workfolder/utils` (nunca falla la operación principal; la IP llega firmada desde el BFF con `INTERNAL_PROXY_SECRET`).
 2. El consumidor lee lotes de 20 con visibility timeout de 30 s.
 3. Inserta con `upsert(onConflict: 'msg_id', ignoreDuplicates)` → idempotente ante reprocesos.
 4. Archiva cada mensaje (queda copia en `pgmq.a_audit_events`).
