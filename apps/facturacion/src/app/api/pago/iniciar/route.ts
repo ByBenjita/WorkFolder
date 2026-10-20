@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { PreApproval } from 'mercadopago';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 import { getSupabaseForUser } from '@/lib/auth';
 import { getMpClient } from '@/lib/mercadopago';
 import { PLANES, type PlanId } from '@/data/planes';
@@ -59,6 +60,14 @@ export async function POST(req: NextRequest) {
     });
 
     const r = result as unknown as Record<string, unknown>;
+
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Inició el pago del plan ${plan.nombre}`,
+      user_id:  user.id,
+      metadata: { plan_id, preapproval_id: r['id'] ?? null, monto, moneda: currency },
+    });
+
     return ok({
       init_point:         r['init_point'],
       sandbox_init_point: r['sandbox_init_point'] ?? null,
@@ -72,6 +81,6 @@ export async function POST(req: NextRequest) {
           ? JSON.stringify(e, null, 2)
           : String(e);
     console.error('[pago/iniciar] Error MP completo:', detail);
-    return err(`Error MP: ${detail}`, 500);
+    return err('Error al iniciar el pago con Mercado Pago', 500);
   }
 }

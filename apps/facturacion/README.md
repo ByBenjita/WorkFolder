@@ -26,6 +26,9 @@ SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 
 FRONTEND_URL=http://localhost:3000
 
+# Secreto compartido con el frontend (BFF): valida la IP del cliente (x-client-ip) para la auditoría
+INTERNAL_PROXY_SECRET=<mismo valor que en apps/frontend>
+
 # Mercado Pago
 MP_ACCESS_TOKEN=<tu-access-token>        # De "Credenciales de prueba" para sandbox
 MP_SANDBOX=true                          # true habilita /api/pago/simular; false en producción real

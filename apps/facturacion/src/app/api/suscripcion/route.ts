@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 import { getSupabaseForUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/services/supabase';
 import { PLANES, type PlanId } from '@/data/planes';
@@ -96,6 +97,13 @@ export async function POST(req: NextRequest) {
       if (error) throw error;
       result = data;
     }
+
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Cambió su suscripción al plan ${plan_id}`,
+      user_id:  user.id,
+      metadata: { plan_id },
+    });
 
     return ok({ suscripcion: result });
   } catch (e) {
