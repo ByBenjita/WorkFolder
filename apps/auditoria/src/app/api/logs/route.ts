@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/services/supabase';
 import { getAuditViewer } from '@/lib/auth';
-import { EVENTOS_VALIDOS } from '@/lib/consumer';
+import { AUDIT_EVENTOS } from '@workfolder/utils';
 import { ok, err } from '@/lib/response';
 
 export { OPTIONS } from '@/lib/response';
@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
     const documentoId = searchParams.get('documentoId');
     const antesDe     = searchParams.get('antesDe'); // paginación por cursor
 
-    if (evento && !EVENTOS_VALIDOS.includes(evento as any)) {
-      return err(`evento inválido. Valores: ${EVENTOS_VALIDOS.join(', ')}`, 400);
+    if (evento && !(AUDIT_EVENTOS as readonly string[]).includes(evento)) {
+      return err(`evento inválido. Valores: ${AUDIT_EVENTOS.join(', ')}`, 400);
     }
 
     let query = supabaseAdmin
