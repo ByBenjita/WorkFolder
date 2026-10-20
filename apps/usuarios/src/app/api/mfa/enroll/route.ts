@@ -25,7 +25,10 @@ export async function POST(req: NextRequest) {
       friendlyName: 'Mi Dispositivo Seguro',
     });
 
-    if (error) return err('Error al generar QR: ' + error.message);
+    if (error) {
+      console.error('[mfa/enroll]', error.message);
+      return err('Error al generar QR');
+    }
 
     return ok({ factor_id: data.id, qr_code: data.totp.qr_code });
 

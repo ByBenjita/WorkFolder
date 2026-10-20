@@ -79,10 +79,13 @@ export const RRHH_RECEPTORS: RRHHReceptor[] = [
 
 // ── Hooks por sección ────────────────────────────────────────────
 
-/** Convierte un registro del microservicio de auditoría al formato de la tabla */
+/**
+ * Convierte un registro del microservicio de auditoría al formato de la tabla.
+ * Sin usuario autenticado (p. ej. login fallido) muestra el email del intento, si existe.
+ */
 export const toAuditLog = (r: AuditRecord): AuditLog => ({
   evento:  r.evento,
-  usuario: r.user_email ?? r.user_id ?? 'Sistema',
+  usuario: r.user_email ?? r.user_id ?? (typeof r.metadata?.email === 'string' ? `${r.metadata.email} (no autenticado)` : 'Sistema'),
   accion:  r.accion,
   ip:      r.ip ?? '—',
   fecha:   new Date(r.ocurrido_en).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'medium' }),

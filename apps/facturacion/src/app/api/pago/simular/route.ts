@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 import { getSupabaseForUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/services/supabase';
 import { isSandbox } from '@/lib/mercadopago';
@@ -61,6 +62,13 @@ export async function POST(req: NextRequest) {
         fecha_proximo_cobro: fechaProximoCobro.toISOString(),
       });
   }
+
+  await auditar(req, {
+    evento:   'Modificación',
+    accion:   `Activó el plan ${plan.nombre} (simulación sandbox)`,
+    user_id:  user.id,
+    metadata: { plan_id, preapproval_id: fakePreapprovalId },
+  });
 
   return ok({ simulado: true, plan_id, estado: 'activo' });
 }

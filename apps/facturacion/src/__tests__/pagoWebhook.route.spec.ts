@@ -2,9 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { queryResult } from './helpers/mocks';
 
-const mockClient = vi.hoisted(() => ({
-  from: vi.fn(),
-}));
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn();
+  return { rpc, schema: vi.fn(() => ({ rpc })), from: vi.fn() };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
 const mpMocks = vi.hoisted(() => ({ preApprovalGet: vi.fn(), paymentGet: vi.fn() }));
 
 vi.mock('@supabase/supabase-js', () => ({
@@ -28,6 +32,7 @@ function webhookReq(body: unknown) {
 
 beforeEach(() => {
   mockClient.from.mockReset();
+  mockClient.rpc.mockReset().mockResolvedValue({ error: null });
   mpMocks.preApprovalGet.mockReset();
   mpMocks.paymentGet.mockReset();
 });
@@ -53,6 +58,12 @@ describe('POST /api/pago/webhook', () => {
     const res = await POST(webhookReq({ type: 'subscription_preapproval', data: { id: 'pre-1' } }));
     expect(res.status).toBe(200);
     expect(mockClient.from).toHaveBeenCalledWith('suscripciones');
+    expect(eventoEncolado()).toMatchObject({
+      evento:   'Modificación',
+      accion:   'Suscripción al plan business activada por Mercado Pago',
+      user_id:  'admin-1',
+      metadata: { preapproval_id: 'pre-1' },
+    });
   });
 
   it('no hace nada si el preapproval aún no está autorizado', async () => {
@@ -75,6 +86,7 @@ describe('POST /api/pago/webhook', () => {
     const res = await POST(webhookReq({ type: 'payment', data: { id: 'pay-1' } }));
     expect(res.status).toBe(200);
     expect(mockClient.from).toHaveBeenCalledWith('facturas');
+    expect(eventoEncolado()).toMatchObject({ evento: 'Modificación', user_id: 'admin-1', metadata: { payment_id: 'pay-1' } });
   });
 
   it('no registra factura si el pago fue rechazado', async () => {

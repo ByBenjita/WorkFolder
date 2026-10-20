@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { agregarIpFirmada } from '@/app/api/ipFirmada';
 
 const FACTURACION_URL = process.env.FACTURACION_API_URL ?? 'http://localhost:3003';
 
+/** Reenvía la petición al microservicio de facturación */
 async function proxy(req: NextRequest, method: string, path: string[]) {
   try {
     const { search } = new URL(req.url);
@@ -13,6 +15,9 @@ async function proxy(req: NextRequest, method: string, path: string[]) {
 
     const auth = req.headers.get('Authorization');
     if (auth) headers['Authorization'] = auth;
+
+    // IP del cliente firmada, para la auditoría
+    agregarIpFirmada(req, headers);
 
     const options: RequestInit = { method, headers };
 

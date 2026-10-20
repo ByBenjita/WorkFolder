@@ -1,22 +1,32 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import type { NextRequest } from 'next/server';
-import { safeEqual } from '@workfolder/utils';
+import { safeEqual } from './safeEqual';
 
 // ── Productor de eventos de auditoría (Supabase Queues / pgmq) ────
-// Los eventos se encolan en `audit_events` y los procesa apps/auditoria.
-// Nunca se deben incluir claves (userKey, newKey, clave_cifrada) en el mensaje.
+// Los microservicios encolan en `audit_events` y apps/auditoria los persiste en audit_log.
+// Nunca incluir claves, contraseñas ni tokens en el evento.
 
-export const AUDIT_QUEUE = 'audit_events';
+export const AUDIT_QUEUE   = 'audit_events';
+export const AUDIT_EVENTOS = ['Acceso', 'Subida', 'Modificación', 'Eliminación', 'Seguridad'] as const;
 
-export type AuditEvento = 'Acceso' | 'Subida' | 'Modificación' | 'Eliminación' | 'Seguridad';
+export type AuditEvento = (typeof AUDIT_EVENTOS)[number];
 
 export interface AuditEvent {
   evento:        AuditEvento;
   accion:        string;
   user_id:       string | null;
   documento_id?: string | null;
-  ip?:           string | null;
   metadata?:     Record<string, unknown>;
+}
+
+/** Cliente con acceso a pgmq_public (SupabaseClient creado con service_role) */
+export interface AuditQueueClient {
+  schema(schema: string): {
+    rpc(fn: string, args: Record<string, unknown>): PromiseLike<{ error: { message: string } | null }>;
+  };
+}
+
+/** Request mínimo del que se lee la IP (NextRequest lo cumple) */
+export interface RequestConHeaders {
+  headers: { get(name: string): string | null };
 }
 
 /**
@@ -25,7 +35,7 @@ export interface AuditEvent {
  * (Vercel reemplaza x-forwarded-for por la IP de la función del BFF).
  * Si no, usa la IP que reporta la plataforma; así nadie puede inyectar una IP falsa.
  */
-export function getClientIp(req: NextRequest): string | null {
+export function getClientIp(req: RequestConHeaders): string | null {
   const secret   = process.env.INTERNAL_PROXY_SECRET;
   const recibido = req.headers.get('x-internal-secret');
   const clientIp = req.headers.get('x-client-ip');
@@ -37,14 +47,14 @@ export function getClientIp(req: NextRequest): string | null {
 }
 
 /**
- * Encola un evento de auditoría.
+ * Encola un evento de auditoría con la IP del request y la fecha actual.
  * Nunca lanza error: si la cola falla, la operación principal sigue funcionando.
  */
-export async function logEvent(client: SupabaseClient, event: AuditEvent): Promise<void> {
+export async function logEvent(client: AuditQueueClient, req: RequestConHeaders, event: AuditEvent): Promise<void> {
   try {
     const { error } = await client.schema('pgmq_public').rpc('send', {
       queue_name:    AUDIT_QUEUE,
-      message:       { ...event, ocurrido_en: new Date().toISOString() },
+      message:       { ...event, ip: getClientIp(req), ocurrido_en: new Date().toISOString() },
       sleep_seconds: 0,
     });
     if (error) console.warn('[audit] No se pudo encolar el evento:', error.message);

@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar, denegarNoAdmin } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -19,9 +20,7 @@ export async function POST(req: NextRequest) {
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !user) return err('No autorizado', 401);
 
-    if (user.app_metadata?.role !== 'admin') {
-      return err('Permisos insuficientes', 403);
-    }
+    if (user.app_metadata?.role !== 'admin') return denegarNoAdmin(req, user.id, 'promover a administrador');
 
     const { userId } = await req.json();
     if (!userId) return err('userId es requerido', 400);
@@ -37,11 +36,22 @@ export async function POST(req: NextRequest) {
       app_metadata: { ...targetData.user.app_metadata, role: 'admin' },
     });
 
-    if (updateError) return err('Error al promover usuario: ' + updateError.message, 500);
+    if (updateError) {
+      console.error('[admin/promote]', updateError.message);
+      return err('Error al promover usuario', 500);
+    }
+
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Promovió a administrador a ${targetData.user.email}`,
+      user_id:  user.id,
+      metadata: { usuario_afectado: userId },
+    });
 
     return ok({ message: `Usuario ${targetData.user.email} ahora es administrador.` });
 
   } catch (e: any) {
-    return err('Error interno: ' + e.message, 500);
+    console.error('[admin/promote]', e?.message ?? e);
+    return err('Error interno del servidor', 500);
   }
 }

@@ -1,3 +1,4 @@
+import { AUDIT_QUEUE, AUDIT_EVENTOS } from '@workfolder/utils';
 import { supabaseAdmin } from '@/services/supabase';
 
 // ── Consumidor de la cola `audit_events` (Supabase Queues / pgmq) ──
@@ -5,8 +6,6 @@ import { supabaseAdmin } from '@/services/supabase';
 // Si algo falla, el mensaje no se archiva y vuelve a estar visible cuando
 // vence el visibility timeout → reintento automático.
 
-export const AUDIT_QUEUE        = 'audit_events';
-export const EVENTOS_VALIDOS    = ['Acceso', 'Subida', 'Modificación', 'Eliminación', 'Seguridad'] as const;
 export const MAX_REINTENTOS     = 5;    // luego de esto el mensaje se archiva sin procesar (dead-letter)
 const DEFAULT_BATCH             = 20;
 const DEFAULT_VISIBILITY_SECS   = 30;
@@ -77,7 +76,7 @@ function uuidONull(valor: unknown): string | null {
  */
 export function mensajeAFila(msg: QueueMessage): Omit<AuditRow, 'user_email'> | null {
   const m = msg.message ?? {};
-  if (!EVENTOS_VALIDOS.includes(m.evento) || typeof m.accion !== 'string' || !m.accion.trim()) {
+  if (!AUDIT_EVENTOS.includes(m.evento) || typeof m.accion !== 'string' || !m.accion.trim()) {
     return null;
   }
 
