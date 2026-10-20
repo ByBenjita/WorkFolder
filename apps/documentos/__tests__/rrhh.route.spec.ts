@@ -2,11 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { queryResult } from './helpers/mocks';
 
-const mockClient = vi.hoisted(() => ({
-  auth: { getUser: vi.fn(), admin: { getUserById: vi.fn() } },
-  from: vi.fn(),
-  storage: { from: vi.fn() },
-}));
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn();
+  return {
+    rpc,
+    schema: vi.fn(() => ({ rpc })),
+    auth: { getUser: vi.fn(), admin: { getUserById: vi.fn() } },
+    from: vi.fn(),
+    storage: { from: vi.fn() },
+  };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -23,6 +31,7 @@ beforeEach(() => {
   mockClient.auth.admin.getUserById.mockReset();
   mockClient.from.mockReset();
   mockClient.storage.from.mockReset();
+  mockClient.rpc.mockReset().mockResolvedValue({ error: null });
 });
 
 describe('GET /api/rrhh (descarga binaria)', () => {
@@ -59,6 +68,7 @@ describe('GET /api/rrhh (descarga binaria)', () => {
     const req = new NextRequest('http://localhost:3002/api/rrhh?download=d1', { headers: authHeaders() });
     const res = await GET(req);
     expect(res.status).toBe(403);
+    expect(eventoEncolado()).toMatchObject({ evento: 'Seguridad', accion: 'Intento de descarga de documento RRHH ajeno', user_id: 'u2', documento_id: 'd1' });
   });
 
   it('un administrador puede descargar documentos aunque no estén asignados a él', async () => {
@@ -92,6 +102,7 @@ describe('GET /api/rrhh (descarga binaria)', () => {
     const req = new NextRequest('http://localhost:3002/api/rrhh?download=d1', { headers: authHeaders() });
     const res = await GET(req);
     expect(res.status).toBe(200);
+    expect(eventoEncolado()).toMatchObject({ evento: 'Acceso', accion: 'Descargó documento RRHH liquidacion.pdf', user_id: 'u2' });
   });
 });
 
@@ -190,7 +201,7 @@ describe('DELETE /api/rrhh (solo admins)', () => {
   it('elimina correctamente el documento y su archivo en Storage', async () => {
     mockClient.auth.getUser.mockResolvedValueOnce({ data: { user: { id: 'admin-1' } } });
     mockClient.auth.admin.getUserById.mockResolvedValueOnce({ data: { user: { app_metadata: { role: 'admin' } } } });
-    mockClient.from.mockReturnValueOnce(queryResult({ data: { storage_path: 'u2/file.pdf' }, error: null }));
+    mockClient.from.mockReturnValueOnce(queryResult({ data: { storage_path: 'u2/file.pdf', nombre_original: 'contrato.pdf' }, error: null }));
     const bucket = { remove: vi.fn().mockResolvedValue({ error: null }) };
     mockClient.storage.from.mockReturnValueOnce(bucket);
     mockClient.from.mockReturnValueOnce(queryResult({ data: {}, error: null }));
@@ -202,5 +213,6 @@ describe('DELETE /api/rrhh (solo admins)', () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(bucket.remove).toHaveBeenCalledWith(['u2/file.pdf']);
+    expect(eventoEncolado()).toMatchObject({ evento: 'Eliminación', accion: 'Eliminó documento RRHH contrato.pdf', user_id: 'admin-1', documento_id: 'd1' });
   });
 });
