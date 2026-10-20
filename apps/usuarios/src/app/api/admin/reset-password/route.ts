@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar, denegarNoAdmin } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !user) return err('No autorizado', 401);
-    if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
+    if (user.app_metadata?.role !== 'admin') return denegarNoAdmin(req, user.id, 'restablecer contraseña');
 
     const { userId, newPassword } = await req.json();
     if (!userId || !newPassword) return err('userId y newPassword son requeridos', 400);
@@ -27,11 +28,23 @@ export async function POST(req: NextRequest) {
       password: newPassword,
     });
 
-    if (updateError) return err('Error al cambiar contraseña: ' + updateError.message, 500);
+    if (updateError) {
+      console.error('[admin/reset-password]', updateError.message);
+      return err('Error al cambiar contraseña', 500);
+    }
+
+    const { data: targetData } = await serviceClient.auth.admin.getUserById(userId);
+    await auditar(req, {
+      evento:   'Modificación',
+      accion:   `Restableció la contraseña de ${targetData?.user?.email ?? userId}`,
+      user_id:  user.id,
+      metadata: { usuario_afectado: userId },
+    });
 
     return ok({ message: 'Contraseña actualizada correctamente.' });
 
   } catch (e: any) {
-    return err('Error interno: ' + e.message, 500);
+    console.error('[admin/reset-password]', e?.message ?? e);
+    return err('Error interno del servidor', 500);
   }
 }

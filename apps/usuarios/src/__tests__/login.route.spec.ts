@@ -6,14 +6,23 @@ import { NextRequest } from 'next/server';
 // en el nivel superior del módulo (al importarse), el mock necesita existir
 // ANTES de que se resuelva ese import. `vi.hoisted` es el mecanismo de
 // Vitest diseñado exactamente para este caso.
-const mockClient = vi.hoisted(() => ({
-  auth: {
-    signInWithPassword: vi.fn(),
-    mfa: {
-      listFactors: vi.fn(),
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn();
+  return {
+    rpc,
+    schema: vi.fn(() => ({ rpc })),
+    auth: {
+      signInWithPassword: vi.fn(),
+      mfa: {
+        listFactors: vi.fn(),
+      },
     },
-  },
-}));
+  };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
+
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -33,6 +42,7 @@ describe('POST /api/auth/login', () => {
   beforeEach(() => {
     mockClient.auth.signInWithPassword.mockReset();
     mockClient.auth.mfa.listFactors.mockReset();
+    mockClient.rpc.mockReset().mockResolvedValue({ error: null });
   });
 
   it('rechaza la petición si falta email o password', async () => {
@@ -56,6 +66,11 @@ describe('POST /api/auth/login', () => {
     expect(res.status).toBe(401);
     expect(json.success).toBe(false);
     expect(json.message).toMatch(/credenciales incorrectas/i);
+    // No expone el mensaje interno de Supabase al cliente
+    expect(json.message).not.toMatch(/invalid login/i);
+    // Se registra el intento fallido sin la contraseña
+    expect(eventoEncolado()).toMatchObject({ evento: 'Seguridad', accion: 'Inicio de sesión fallido', metadata: { email: 'a@a.com' } });
+    expect(JSON.stringify(mockClient.rpc.mock.calls)).not.toContain('wrong');
   });
 
   it('devuelve 500 si Supabase no entrega sesión', async () => {
@@ -86,6 +101,7 @@ describe('POST /api/auth/login', () => {
     expect(json.access_token).toBe('tok-123');
     expect(json.mfa.configured).toBe(false);
     expect(json.mfa.next_step).toBe('setup');
+    expect(eventoEncolado()).toMatchObject({ evento: 'Acceso', accion: 'Inició sesión' });
   });
 
   it('marca next_step="verify" cuando el usuario ya tiene un factor TOTP verificado', async () => {

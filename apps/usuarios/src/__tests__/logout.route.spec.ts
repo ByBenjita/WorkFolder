@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const mockClient = vi.hoisted(() => ({
-  auth: { signOut: vi.fn() },
-}));
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn();
+  return { rpc, schema: vi.fn(() => ({ rpc })), auth: { signOut: vi.fn(), getUser: vi.fn() } };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
+
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -21,6 +26,8 @@ function makeRequest() {
 describe('POST /api/auth/logout', () => {
   beforeEach(() => {
     mockClient.auth.signOut.mockReset();
+    mockClient.rpc.mockReset().mockResolvedValue({ error: null });
+    mockClient.auth.getUser.mockReset().mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
   });
 
   it('cierra sesión correctamente', async () => {
@@ -31,6 +38,7 @@ describe('POST /api/auth/logout', () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
+    expect(eventoEncolado()).toMatchObject({ evento: 'Acceso', accion: 'Cerró sesión', user_id: 'u1' });
   });
 
   it('devuelve error si Supabase falla al cerrar sesión', async () => {

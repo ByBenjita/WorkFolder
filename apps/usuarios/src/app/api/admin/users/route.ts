@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { denegarNoAdmin } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -17,10 +18,13 @@ export async function GET(req: NextRequest) {
 
     const { data: { user }, error: userError } = await serviceClient.auth.getUser(token);
     if (userError || !user) return err('No autorizado', 401);
-    if (user.app_metadata?.role !== 'admin') return err('Permisos insuficientes', 403);
+    if (user.app_metadata?.role !== 'admin') return denegarNoAdmin(req, user.id, 'listar usuarios');
 
     const { data: { users }, error: listError } = await serviceClient.auth.admin.listUsers();
-    if (listError) return err('Error al obtener usuarios: ' + listError.message, 500);
+    if (listError) {
+      console.error('[admin/users]', listError.message);
+      return err('Error al obtener usuarios', 500);
+    }
 
     const result = users.map((u) => ({
       id:          u.id,
@@ -39,6 +43,7 @@ export async function GET(req: NextRequest) {
     return ok({ users: result });
 
   } catch (e: any) {
-    return err('Error interno: ' + e.message, 500);
+    console.error('[admin/users]', e?.message ?? e);
+    return err('Error interno del servidor', 500);
   }
 }

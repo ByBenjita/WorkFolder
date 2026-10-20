@@ -23,6 +23,9 @@ SUPABASE_URL=https://<tu-proyecto>.supabase.co
 SUPABASE_ANON_KEY=<tu-anon-key>
 SUPABASE_SERVICE_ROLE_KEY=<tu-service-role-key>
 FRONTEND_URL=http://localhost:3000
+
+# Secreto compartido con el frontend (BFF): valida la IP del cliente (x-client-ip) para la auditoría
+INTERNAL_PROXY_SECRET=<mismo valor que en apps/frontend>
 ```
 
 > `SUPABASE_SERVICE_ROLE_KEY` otorga acceso completo a la base de datos. No exponerla al cliente ni commitearla.

@@ -1,9 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 
-const mockClient = vi.hoisted(() => ({
-  auth: { getUser: vi.fn(), admin: { updateUserById: vi.fn() } },
-}));
+const mockClient = vi.hoisted(() => {
+  const rpc = vi.fn().mockResolvedValue({ error: null });
+  return {
+    rpc,
+    schema: vi.fn(() => ({ rpc })),
+    auth: {
+      getUser: vi.fn(),
+      admin: {
+        updateUserById: vi.fn(),
+        getUserById:    vi.fn().mockResolvedValue({ data: { user: { email: 'colaborador@empresa.cl' } }, error: null }),
+      },
+    },
+  };
+});
+
+/** Último mensaje enviado a la cola de auditoría (pgmq_public.send) */
+const eventoEncolado = () => mockClient.rpc.mock.calls.filter(([fn]) => fn === 'send').at(-1)?.[1].message;
+
 
 vi.mock('@supabase/supabase-js', () => ({
   createClient: vi.fn(() => mockClient),
@@ -75,6 +90,9 @@ describe('POST /api/admin/reset-password', () => {
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
     expect(mockClient.auth.admin.updateUserById).toHaveBeenCalledWith('u2', { password: '12345678' });
+    // El evento identifica al usuario afectado pero nunca incluye la contraseña
+    expect(eventoEncolado()).toMatchObject({ evento: 'Modificación', accion: 'Restableció la contraseña de colaborador@empresa.cl' });
+    expect(JSON.stringify(mockClient.rpc.mock.calls)).not.toContain('12345678');
   });
 
   it('devuelve 500 si Supabase falla al actualizar', async () => {

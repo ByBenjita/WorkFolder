@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { ok, err, OPTIONS } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 
 export { OPTIONS };
 
@@ -20,14 +21,14 @@ export async function POST(req: NextRequest) {
     );
 
     // Establecer sesión AAL2
-    const { error: sessionError } = await supabase.auth.setSession({
+    const { data: sessionInfo, error: sessionError } = await supabase.auth.setSession({
       access_token:  accessToken,
       refresh_token: refresh_token ?? '',
     });
 
     if (sessionError) {
       console.error('[reset] setSession error:', sessionError.message);
-      return err('Sesión inválida: ' + sessionError.message, 401);
+      return err('Sesión inválida', 401);
     }
 
     // Actualizar contraseña con sesión AAL2 activa
@@ -35,8 +36,14 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error('[reset] updateUser error:', error.message);
-      return err('Error al actualizar contraseña: ' + error.message);
+      return err('Error al actualizar contraseña');
     }
+
+    await auditar(req, {
+      evento:  'Modificación',
+      accion:  'Cambió su contraseña (recuperación)',
+      user_id: sessionInfo?.user?.id ?? null,
+    });
 
     return ok({ message: 'Contraseña actualizada correctamente' });
 

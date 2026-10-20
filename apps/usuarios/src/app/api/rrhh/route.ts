@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { corsHeaders, OPTIONS as corsOptions } from '@/lib/response';
+import { auditar } from '@/lib/audit';
 
 export { corsOptions as OPTIONS };
 
@@ -50,7 +51,10 @@ export async function GET(req: NextRequest) {
   if (!admin) query = query.eq('asignado_a', user.id);
 
   const { data, error } = await query;
-  if (error) return jsonErr(error.message, 500);
+  if (error) {
+    console.error('[rrhh GET]', error.message);
+    return jsonErr('Error al obtener los documentos', 500);
+  }
 
   return jsonOk({ data, isAdmin: admin });
 }
@@ -75,7 +79,7 @@ export async function PATCH(req: NextRequest) {
 
   const { data: doc } = await sb
     .from('rrhh_documentos')
-    .select('id, asignado_a, estado')
+    .select('id, asignado_a, estado, nombre_original')
     .eq('id', id)
     .single();
 
@@ -83,6 +87,12 @@ export async function PATCH(req: NextRequest) {
 
   const admin = await checkAdmin(user.id);
   if (!admin && doc.asignado_a !== user.id) {
+    await auditar(req, {
+      evento:       'Seguridad',
+      accion:       'Intento de firmar documento RRHH ajeno',
+      user_id:      user.id,
+      documento_id: doc.id,
+    });
     return jsonErr('Sin permisos para firmar este documento', 403);
   }
 
@@ -106,6 +116,13 @@ export async function PATCH(req: NextRequest) {
   ]);
 
   if (firmaError || updateError) return jsonErr('Error al registrar la firma', 500);
+
+  await auditar(req, {
+    evento:       'Modificación',
+    accion:       `Firmó el documento RRHH ${doc.nombre_original}`,
+    user_id:      user.id,
+    documento_id: doc.id,
+  });
 
   return jsonOk({ message: 'Documento firmado correctamente' });
 }
