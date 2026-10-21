@@ -741,6 +741,122 @@ export const facturacionStyles = css.global`
     background: linear-gradient(135deg, var(--wf-safe), var(--wf-safe-strong));
   }
 
+  /* ── Pantalla de pago aprobado ── */
+  .fact-ok {
+    max-width: 420px;
+    padding: 40px 32px 0;
+    text-align: center;
+    overflow: hidden;
+    animation: fact-ok-in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  }
+
+  .fact-ok-icon {
+    width: 84px; height: 84px;
+    margin: 0 auto 22px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    background: linear-gradient(150deg, var(--wf-safe), var(--wf-safe-strong));
+    box-shadow: 0 0 0 10px var(--wf-safe-soft), 0 18px 36px -12px oklch(0.52 0.13 158 / 0.55);
+    animation: fact-ok-pop 0.5s 0.1s cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  }
+
+  .fact-ok-check {
+    stroke-dasharray: 22;
+    stroke-dashoffset: 22;
+    animation: fact-ok-draw 0.45s 0.45s ease-out forwards;
+  }
+
+  .fact-ok-title {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: var(--wf-ink);
+  }
+
+  .fact-ok-sub {
+    margin: 0 0 28px;
+    font-size: 15px;
+    color: var(--wf-ink-2);
+  }
+  .fact-ok-sub strong { color: var(--wf-safe-strong); }
+
+  .fact-ok-redirect {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 14px 0 20px;
+    border-top: 1px solid var(--wf-line-soft);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--wf-muted);
+  }
+
+  .fact-ok-spinner {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid var(--wf-line);
+    border-top-color: var(--wf-primary);
+    animation: fact-ok-spin 0.8s linear infinite;
+  }
+
+  .fact-ok-count {
+    min-width: 26px; height: 26px;
+    border-radius: 8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-family: var(--wf-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--wf-primary-strong);
+    background-color: var(--wf-primary-soft);
+  }
+
+  .fact-ok-progress {
+    margin: 0 -32px;
+    height: 4px;
+    background-color: var(--wf-line-soft);
+  }
+  .fact-ok-progress span {
+    display: block; height: 100%;
+    background: linear-gradient(90deg, var(--wf-safe), var(--wf-primary));
+    transform-origin: left;
+    animation: fact-ok-bar linear forwards;
+  }
+
+  /* Variante de error: mismos elementos en rojo */
+  .fact-ok.error .fact-ok-icon {
+    background: linear-gradient(150deg, oklch(0.62 0.20 22), oklch(0.50 0.20 22));
+    box-shadow: 0 0 0 10px oklch(0.58 0.20 22 / 0.10), 0 18px 36px -12px oklch(0.50 0.20 22 / 0.55);
+    animation-name: fact-ok-pop, fact-ok-shake;
+    animation-duration: 0.5s, 0.4s;
+    animation-delay: 0.1s, 0.6s;
+    animation-fill-mode: both, none;
+  }
+  .fact-ok.error .fact-ok-check { stroke-dasharray: 30; stroke-dashoffset: 30; }
+  .fact-ok.error .fact-ok-sub strong { color: oklch(0.50 0.20 22); }
+  .fact-ok.error .fact-ok-spinner { border-top-color: oklch(0.58 0.20 22); }
+  .fact-ok.error .fact-ok-count { color: oklch(0.50 0.20 22); background-color: oklch(0.58 0.20 22 / 0.10); }
+  .fact-ok.error .fact-ok-progress span { background: linear-gradient(90deg, oklch(0.62 0.20 22), oklch(0.50 0.20 22)); }
+
+  @keyframes fact-ok-shake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+
+  @keyframes fact-ok-in   { from { opacity: 0; transform: translateY(12px) scale(0.97); } to { opacity: 1; transform: none; } }
+  @keyframes fact-ok-pop  { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  @keyframes fact-ok-draw { to { stroke-dashoffset: 0; } }
+  @keyframes fact-ok-spin { to { transform: rotate(360deg); } }
+  @keyframes fact-ok-bar  { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fact-ok, .fact-ok-icon, .fact-ok-check, .fact-ok-progress span { animation: none; stroke-dashoffset: 0; }
+    .fact-ok-progress span { transform: none; }
+    .fact-ok-spinner { animation-duration: 2.4s; }
+    .fact-ok.error .fact-ok-icon { animation: none; }
+    .fact-ok.error .fact-ok-check { animation: none; stroke-dashoffset: 0; }
+  }
+
   @media (max-width: 1080px) {
     .fact-plans { grid-template-columns: 1fr; max-width: 440px; margin-left: auto; margin-right: auto; }
     .fact-current-meta { display: none; }
