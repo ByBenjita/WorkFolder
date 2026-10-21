@@ -5,6 +5,7 @@ import { auditar } from '@/lib/audit';
 import { getSupabaseForUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/services/supabase';
 import { getMpClient } from '@/lib/mercadopago';
+import { TOPICS, getClientIp, publicar } from '@workfolder/utils';
 
 export { OPTIONS };
 
@@ -76,6 +77,11 @@ export async function GET(req: NextRequest) {
       user_id:  user.id,
       metadata: { plan_id: planId, preapproval_id: preapprovalId },
     });
+
+    // Avisa al resto de suscriptores; facturación lo verá ya aplicado y solo lo confirma
+    await publicar(supabaseAdmin, TOPICS.SUSCRIPCION_AUTORIZADA, {
+      admin_id: adminId, plan_id: planId, preapproval_id: preapprovalId, origen: 'sync', ip: getClientIp(req),
+    }).catch((e) => console.warn('[pago/sync]', e.message));
 
     return ok({ sincronizado: true, plan_id: planId, estado: 'activo' });
   } catch (e) {

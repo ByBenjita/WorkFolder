@@ -34,6 +34,11 @@ MP_ACCESS_TOKEN=<tu-access-token>        # De "Credenciales de prueba" para sand
 MP_SANDBOX=true                          # true habilita /api/pago/simular; false en producción real
 MP_CURRENCY=CLP
 MP_BACK_URL=http://localhost:3000/admin/enterprise-panel
+
+# Pub/Sub de eventos de pago (suscriptor de la cola facturacion_eventos)
+EVENTS_WORKER_SECRET=<string largo aleatorio>   # protege POST /api/eventos/procesar
+EVENTS_POLL_MS=5000                             # opcional
+EVENTS_POLLER=on                                # "off" en serverless (usar cron)
 ```
 
 > Para pruebas, usa el Access Token de **Credenciales de prueba** y `MP_SANDBOX=true`. Las credenciales de prueba nuevas también empiezan con `APP_USR-`, por eso el modo sandbox se define con `MP_SANDBOX` y no por el prefijo del token.
@@ -93,6 +98,28 @@ Los tests se encuentran en `src/__tests__/`.
 5. El webhook actualiza el estado de la suscripción en Supabase
 6. El usuario es redirigido a MP_BACK_URL
 ```
+
+## Eventos de pago (Publish/Subscribe + acknowledge)
+
+El webhook de Mercado Pago ya no escribe en la base: verifica la notificación contra la API de MP y **publica** un evento. Cada microservicio suscrito lo procesa desde su propia cola (Supabase Queues / pgmq).
+
+```
+MP ──webhook──▶ facturacion ──publicar_evento──┬─▶ [facturacion_eventos] ─▶ facturacion: suscripción / factura ─ack
+     ◀── 200 = ack a MP                        └─▶ [usuarios_eventos]    ─▶ usuarios: app_metadata.plan      ─ack
+     ◀── 500 = MP reintenta
+```
+
+| Tema | Suscriptores | Lo publica |
+|---|---|---|
+| `suscripcion.autorizada` | facturación, usuarios | webhook, `/api/pago/sync`, `/api/pago/simular` |
+| `pago.aprobado` | facturación | webhook |
+
+- **Ack al productor:** el webhook responde 200 solo si el evento quedó publicado; si MP o la cola fallan responde 500 y MP reintenta.
+- **Ack del suscriptor:** el mensaje se archiva solo si se procesó bien. Si falla, reaparece a los 30 s; tras 5 entregas se archiva como dead-letter.
+- **Idempotencia:** la suscripción no se reescribe si ya está aplicada y la factura no se duplica por `mp_payment_id`.
+- Un `pago.aprobado` que llega antes que la suscripción se reintenta hasta que ésta exista.
+- Suscriptor: `src/instrumentation.ts` (poller local) o `POST /api/eventos/procesar` con `x-worker-secret` (cron en serverless).
+- Setup: ejecutar `supabase/migrations/20261021120000_pubsub_pagos.sql`. Para sumar un suscriptor: crear su cola e insertarla en `public.event_subscriptions`.
 
 ## Modo Sandbox
 
