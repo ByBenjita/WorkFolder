@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Paquete TypeScript del monorepo: Next debe transpilarlo (lo usa también instrumentation.ts)
+  transpilePackages: ['@workfolder/utils'],
+  experimental: {
+    // Habilita src/instrumentation.ts (arranca el suscriptor de eventos)
+    instrumentationHook: true,
+  },
   async headers() {
     return [
       {
