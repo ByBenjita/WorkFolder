@@ -1,29 +1,40 @@
 import { NextRequest } from 'next/server';
 import { PreApproval, Payment } from 'mercadopago';
+import { TOPICS, getClientIp, publicar } from '@workfolder/utils';
 import { getMpClient } from '@/lib/mercadopago';
 import { supabaseAdmin } from '@/services/supabase';
-import { auditar } from '@/lib/audit';
 
+/**
+ * Webhook de Mercado Pago (productor).
+ * Verifica la notificación contra la API de MP y publica el evento; los suscriptores
+ * (facturación, usuarios) lo procesan en segundo plano.
+ * - 200 = ack a MP: el evento quedó publicado (o no había nada que hacer).
+ * - 500 = sin ack: MP reintenta la notificación.
+ */
 export async function POST(req: NextRequest) {
+  let body: { type?: string; data?: { id?: unknown } };
   try {
-    const body = await req.json();
-    const { type, data } = body as { type: string; data?: { id?: unknown } };
+    body = await req.json();
+  } catch {
+    return new Response(null, { status: 200 }); // body inválido: reintentar no lo arregla
+  }
 
+  try {
+    const { type, data } = body;
     if (type === 'subscription_preapproval' && data?.id) {
-      await sincronizarPreapproval(req, String(data.id));
+      await publicarPreapproval(req, String(data.id));
     } else if (type === 'payment' && data?.id) {
-      await registrarPago(req, String(data.id));
+      await publicarPago(req, String(data.id));
     }
-
     return new Response(null, { status: 200 });
   } catch (e) {
     console.error('[webhook MP]', e);
-    return new Response(null, { status: 200 });
+    return new Response(null, { status: 500 });
   }
 }
 
-/** Activa o actualiza la suscripción cuando Mercado Pago autoriza la preaprobación */
-async function sincronizarPreapproval(req: NextRequest, preapprovalId: string) {
+/** Publica `suscripcion.autorizada` cuando Mercado Pago autoriza la preaprobación */
+async function publicarPreapproval(req: NextRequest, preapprovalId: string) {
   const preApproval = new PreApproval(getMpClient());
   const sub = await preApproval.get({ id: preapprovalId });
 
@@ -31,49 +42,17 @@ async function sincronizarPreapproval(req: NextRequest, preapprovalId: string) {
 
   const [adminId, planId] = sub.external_reference.split('|');
 
-  const fechaProximoCobro = new Date();
-  fechaProximoCobro.setMonth(fechaProximoCobro.getMonth() + 1);
-
-  const { data: existing } = await supabaseAdmin
-    .from('suscripciones')
-    .select('id')
-    .eq('admin_id', adminId)
-    .maybeSingle();
-
-  if (existing) {
-    await supabaseAdmin
-      .from('suscripciones')
-      .update({
-        plan_id: planId,
-        estado: 'activo',
-        mp_preapproval_id: preapprovalId,
-        fecha_proximo_cobro: fechaProximoCobro.toISOString(),
-        actualizado_en: new Date().toISOString(),
-      })
-      .eq('admin_id', adminId);
-  } else {
-    await supabaseAdmin
-      .from('suscripciones')
-      .insert({
-        admin_id: adminId,
-        plan_id: planId,
-        estado: 'activo',
-        mp_preapproval_id: preapprovalId,
-        fecha_inicio: new Date().toISOString(),
-        fecha_proximo_cobro: fechaProximoCobro.toISOString(),
-      });
-  }
-
-  await auditar(req, {
-    evento:   'Modificación',
-    accion:   `Suscripción al plan ${planId} activada por Mercado Pago`,
-    user_id:  adminId,
-    metadata: { plan_id: planId, preapproval_id: preapprovalId },
+  await publicar(supabaseAdmin, TOPICS.SUSCRIPCION_AUTORIZADA, {
+    admin_id:       adminId,
+    plan_id:        planId,
+    preapproval_id: preapprovalId,
+    origen:         'webhook',
+    ip:             getClientIp(req),
   });
 }
 
-/** Registra la factura de un pago aprobado por Mercado Pago */
-async function registrarPago(req: NextRequest, paymentId: string) {
+/** Publica `pago.aprobado` cuando Mercado Pago aprueba un pago */
+async function publicarPago(req: NextRequest, paymentId: string) {
   const payment = new Payment(getMpClient());
   const pago = await payment.get({ id: paymentId });
 
@@ -81,31 +60,11 @@ async function registrarPago(req: NextRequest, paymentId: string) {
 
   const [adminId] = pago.external_reference.split('|');
 
-  const { data: suscripcion } = await supabaseAdmin
-    .from('suscripciones')
-    .select('id')
-    .eq('admin_id', adminId)
-    .maybeSingle();
-
-  if (!suscripcion) return;
-
-  const ahora = new Date();
-  const periodoFin = new Date(ahora);
-  periodoFin.setMonth(periodoFin.getMonth() + 1);
-
-  await supabaseAdmin.from('facturas').insert({
-    suscripcion_id: suscripcion.id,
-    monto: pago.transaction_amount ?? 0,
-    estado: 'pagado',
-    periodo_inicio: ahora.toISOString().slice(0, 10),
-    periodo_fin: periodoFin.toISOString().slice(0, 10),
-    mp_payment_id: String(paymentId),
-  });
-
-  await auditar(req, {
-    evento:   'Modificación',
-    accion:   `Pago aprobado de ${pago.transaction_amount ?? 0} ${pago.currency_id ?? ''} vía Mercado Pago`,
-    user_id:  adminId,
-    metadata: { payment_id: String(paymentId), suscripcion_id: suscripcion.id },
+  await publicar(supabaseAdmin, TOPICS.PAGO_APROBADO, {
+    admin_id:   adminId,
+    payment_id: paymentId,
+    monto:      pago.transaction_amount ?? 0,
+    moneda:     pago.currency_id ?? null,
+    ip:         getClientIp(req),
   });
 }

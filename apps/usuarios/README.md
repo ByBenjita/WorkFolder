@@ -26,6 +26,11 @@ FRONTEND_URL=http://localhost:3000
 
 # Secreto compartido con el frontend (BFF): valida la IP del cliente (x-client-ip) para la auditoría
 INTERNAL_PROXY_SECRET=<mismo valor que en apps/frontend>
+
+# Pub/Sub de eventos de pago (suscriptor de la cola usuarios_eventos)
+EVENTS_WORKER_SECRET=<string largo aleatorio>   # protege POST /api/eventos/procesar
+EVENTS_POLL_MS=5000                             # opcional
+EVENTS_POLLER=on                                # "off" en serverless (usar cron)
 ```
 
 > `SUPABASE_SERVICE_ROLE_KEY` otorga acceso completo a la base de datos. No exponerla al cliente ni commitearla.

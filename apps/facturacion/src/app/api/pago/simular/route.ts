@@ -5,6 +5,7 @@ import { getSupabaseForUser } from '@/lib/auth';
 import { supabaseAdmin } from '@/services/supabase';
 import { isSandbox } from '@/lib/mercadopago';
 import { PLANES, type PlanId } from '@/data/planes';
+import { TOPICS, getClientIp, publicar } from '@workfolder/utils';
 
 export { OPTIONS };
 
@@ -69,6 +70,11 @@ export async function POST(req: NextRequest) {
     user_id:  user.id,
     metadata: { plan_id, preapproval_id: fakePreapprovalId },
   });
+
+  // Avisa al resto de suscriptores; facturación lo verá ya aplicado y solo lo confirma
+  await publicar(supabaseAdmin, TOPICS.SUSCRIPCION_AUTORIZADA, {
+    admin_id: user.id, plan_id, preapproval_id: fakePreapprovalId, origen: 'simulacion', ip: getClientIp(req),
+  }).catch((e) => console.warn('[pago/simular]', e.message));
 
   return ok({ simulado: true, plan_id, estado: 'activo' });
 }

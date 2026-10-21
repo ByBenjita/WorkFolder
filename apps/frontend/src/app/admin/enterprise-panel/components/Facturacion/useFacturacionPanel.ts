@@ -23,8 +23,9 @@ export function useFacturacionPanel() {
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState('');
   const [redirigiendo, setRedirigiendo] = useState(false);
-  const [actionError, setActionError]   = useState('');
+  const [pagoFallido, setPagoFallido]   = useState(false);
   const [successMsg, setSuccessMsg]     = useState('');
+  const [planAprobado, setPlanAprobado] = useState<PlanId | null>(null);
   const [confirmPlan, setConfirmPlan]   = useState<Plan | null>(null);
   const [modalStep, setModalStep]       = useState<1 | 2>(1);
   const [datosContacto, setDatosContacto] = useState<DatosContacto>(DATOS_VACIO);
@@ -62,7 +63,7 @@ export function useFacturacionPanel() {
       .then((res) => {
         if (res.sincronizado) {
           fetchAll();
-          setSuccessMsg('Plan actualizado correctamente con Mercado Pago.');
+          setPlanAprobado((res.plan_id as PlanId) ?? null);
         } else {
           setSuccessMsg('Pago en procesamiento. El plan se actualizará en breve.');
         }
@@ -75,10 +76,15 @@ export function useFacturacionPanel() {
       .catch(() => {});
   }, [fetchAll]);
 
+  /** Cierra la pantalla de pago aprobado al terminar la cuenta regresiva */
+  const cerrarPagoAprobado = useCallback(() => setPlanAprobado(null), []);
+
+  /** Cierra la pantalla de pago fallido al terminar la cuenta regresiva */
+  const cerrarPagoFallido = useCallback(() => setPagoFallido(false), []);
+
   function abrirModal(plan: Plan) {
     setModalStep(1);
     setDatosContacto(DATOS_VACIO);
-    setActionError('');
     setConfirmPlan(plan);
   }
 
@@ -104,15 +110,16 @@ export function useFacturacionPanel() {
     if (!confirmPlan) return;
     try {
       setRedirigiendo(true);
-      setActionError('');
       setSuccessMsg('');
       await facturacionService.simularPago(confirmPlan.id);
       cerrarModal();
       await fetchAll();
-      setSuccessMsg(`Plan ${confirmPlan.nombre} activado (simulación sandbox).`);
+      setRedirigiendo(false);
+      setPlanAprobado(confirmPlan.id);
     } catch (e: unknown) {
       setRedirigiendo(false);
-      setActionError(e instanceof Error ? e.message : 'Error al simular pago');
+      console.error('[facturacion] Error al simular pago:', e);
+      setPagoFallido(true);
       cerrarModal();
     }
   }
@@ -121,7 +128,6 @@ export function useFacturacionPanel() {
     if (!confirmPlan) return;
     try {
       setRedirigiendo(true);
-      setActionError('');
       setSuccessMsg('');
 
       const { sandbox_init_point, init_point } =
@@ -131,9 +137,8 @@ export function useFacturacionPanel() {
       window.location.href = sandbox_init_point ?? init_point;
     } catch (e: unknown) {
       setRedirigiendo(false);
-      setActionError(
-        e instanceof Error ? e.message : 'Error al conectar con Mercado Pago'
-      );
+      console.error('[facturacion] Error al iniciar el pago con Mercado Pago:', e);
+      setPagoFallido(true);
       cerrarModal();
     }
   }
@@ -145,8 +150,11 @@ export function useFacturacionPanel() {
     loading,
     error,
     redirigiendo,
-    actionError,
+    pagoFallido,
+    cerrarPagoFallido,
     successMsg,
+    planAprobado,
+    cerrarPagoAprobado,
     confirmPlan,
     modalStep,
     datosContacto,
