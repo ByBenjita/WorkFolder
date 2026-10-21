@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useFacturacionPanel, type DatosContacto } from './useFacturacionPanel';
 import { facturacionStyles } from './FacturacionPanel.styles';
 import type { Plan, PlanId, Factura } from '@/services/facturacionService';
@@ -315,6 +315,65 @@ function PasoModal({
   );
 }
 
+// ── Pantalla de resultado del pago (aprobado / fallido) ──────────────────────
+
+const SEGUNDOS_REDIRECCION = 5;
+
+type ResultadoPago = { tipo: 'ok'; nombrePlan: string } | { tipo: 'error' };
+
+function ResultadoPagoOverlay({ resultado, onFin }: { resultado: ResultadoPago; onFin: () => void }) {
+  const [restantes, setRestantes] = useState(SEGUNDOS_REDIRECCION);
+  const esError = resultado.tipo === 'error';
+
+  useEffect(() => {
+    if (restantes === 0) { onFin(); return; }
+    const t = setTimeout(() => setRestantes((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [restantes, onFin]);
+
+  return (
+    <div className="fact-overlay">
+      <div className={`fact-modal fact-ok ${esError ? 'error' : ''}`} role="alertdialog" aria-live="assertive" aria-labelledby="fact-ok-title">
+        <div className="fact-ok-icon" aria-hidden>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+            {esError
+              ? <path className="fact-ok-check" d="M7 7l10 10M17 7 7 17" />
+              : <path className="fact-ok-check" d="m6 12.5 4 4 8-9" />}
+          </svg>
+        </div>
+
+        {resultado.tipo === 'ok' ? (
+          <>
+            <h2 id="fact-ok-title" className="fact-ok-title">¡Pago aprobado con éxito!</h2>
+            <p className="fact-ok-sub">
+              Bienvenido a nuestro plan <strong>{resultado.nombrePlan}</strong>
+            </p>
+          </>
+        ) : (
+          <>
+            <h2 id="fact-ok-title" className="fact-ok-title">¡Oh! Lo sentimos</h2>
+            <p className="fact-ok-sub">
+              No se ha podido procesar tu compra.<br />
+              Favor, intenta más tarde. <strong>¡Gracias!</strong>
+            </p>
+          </>
+        )}
+
+        <div className="fact-ok-redirect">
+          <span className="fact-ok-spinner" aria-hidden />
+          <span>{esError ? 'Volviendo a Facturación en' : 'Redirigiendo a Facturación en'}</span>
+          <span className="fact-ok-count">{restantes}</span>
+        </div>
+
+        <div className="fact-ok-progress" aria-hidden>
+          <span style={{ animationDuration: `${SEGUNDOS_REDIRECCION}s` }} />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Componente principal ─────────────────────────────────────────────────────
 
 export default function FacturacionPanel() {
@@ -325,8 +384,11 @@ export default function FacturacionPanel() {
     loading,
     error,
     redirigiendo,
-    actionError,
     successMsg,
+    planAprobado,
+    cerrarPagoAprobado,
+    pagoFallido,
+    cerrarPagoFallido,
     confirmPlan,
     modalStep,
     datosContacto,
@@ -341,6 +403,18 @@ export default function FacturacionPanel() {
 
   const planActual: PlanId = suscripcion?.plan_id ?? 'startup';
   const planActualObj = planes.find((p) => p.id === planActual);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  // Al terminar la cuenta regresiva vuelve al inicio de Facturación (banner del plan actual)
+  const finPagoAprobado = React.useCallback(() => {
+    cerrarPagoAprobado();
+    wrapperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [cerrarPagoAprobado]);
+
+  const finPagoFallido = React.useCallback(() => {
+    cerrarPagoFallido();
+    wrapperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [cerrarPagoFallido]);
 
   if (loading) {
     return (
@@ -361,7 +435,7 @@ export default function FacturacionPanel() {
   }
 
   return (
-    <div className="fact-wrapper">
+    <div className="fact-wrapper" ref={wrapperRef}>
       <style jsx global>{facturacionStyles}</style>
       <div className="fact-inner">
 
@@ -413,7 +487,6 @@ export default function FacturacionPanel() {
         <h2 className="fact-title">Planes de Suscripción</h2>
 
         {successMsg  && <p className="fact-success">{successMsg}</p>}
-        {actionError && <p className="fact-action-error">{actionError}</p>}
 
         {/* ── Tarjetas de planes ── */}
         <div className="fact-plans">
@@ -475,6 +548,19 @@ export default function FacturacionPanel() {
           onSimular={handleSimularPago}
           onCancelar={cerrarModal}
         />
+      )}
+
+      {/* ── Pago aprobado ── */}
+      {planAprobado && (
+        <ResultadoPagoOverlay
+          resultado={{ tipo: 'ok', nombrePlan: planes.find((p) => p.id === planAprobado)?.nombre ?? planAprobado }}
+          onFin={finPagoAprobado}
+        />
+      )}
+
+      {/* ── Pago fallido ── */}
+      {pagoFallido && (
+        <ResultadoPagoOverlay resultado={{ tipo: 'error' }} onFin={finPagoFallido} />
       )}
     </div>
   );
