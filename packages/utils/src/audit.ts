@@ -1,4 +1,5 @@
 import { safeEqual } from './safeEqual';
+import { TOPICOS_NEGOCIO, categorizarAccion, emitirEventoNegocio } from './eventos';
 
 // ── Productor de eventos de auditoría (Supabase Queues / pgmq) ────
 // Los microservicios encolan en `audit_events` y apps/auditoria los persiste en audit_log.
@@ -51,14 +52,26 @@ export function getClientIp(req: RequestConHeaders): string | null {
  * Nunca lanza error: si la cola falla, la operación principal sigue funcionando.
  */
 export async function logEvent(client: AuditQueueClient, req: RequestConHeaders, event: AuditEvent): Promise<void> {
+  const ocurrido_en = new Date().toISOString();
   try {
     const { error } = await client.schema('pgmq_public').rpc('send', {
       queue_name:    AUDIT_QUEUE,
-      message:       { ...event, ip: getClientIp(req), ocurrido_en: new Date().toISOString() },
+      message:       { ...event, ip: getClientIp(req), ocurrido_en },
       sleep_seconds: 0,
     });
     if (error) console.warn('[audit] No se pudo encolar el evento:', error.message);
   } catch (e: any) {
     console.warn('[audit] Error al encolar el evento:', e?.message ?? e);
   }
+
+  // Métricas en tiempo real vía apps/reportes (no-op si REPORTES_API_URL no está definido)
+  await emitirEventoNegocio(TOPICOS_NEGOCIO.ACTIVIDAD, event.user_id, {
+    tipo:        event.evento,
+    ocurrido_en,
+    datos: {
+      categoria:    categorizarAccion(event.evento, event.accion),
+      user_id:      event.user_id,
+      documento_id: event.documento_id ?? null,
+    },
+  });
 }

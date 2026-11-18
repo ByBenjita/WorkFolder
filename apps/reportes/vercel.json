@@ -1,0 +1,15 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/queues/actividad/route.ts": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "workfolder-actividad", "retryAfterSeconds": 30, "maxDeliveries": 10 }
+      ]
+    },
+    "src/app/api/queues/pagos/route.ts": {
+      "experimentalTriggers": [
+        { "type": "queue/v2beta", "topic": "workfolder-pagos", "retryAfterSeconds": 30, "maxDeliveries": 10 }
+      ]
+    }
+  }
+}

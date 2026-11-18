@@ -15,6 +15,7 @@ import AdminBovedaPanel  from '../AdminBovedaPanel/AdminBovedaPanel';
 import AdminUsersPanel   from '../AdminUsersPanel/AdminUsersPanel';
 import RRHHPanel         from '../RRHHPanel/RRHHPanel';
 import FacturacionPanel  from '../Facturacion/FacturacionPanel';
+import MetricasPanel     from '../MetricasPanel/MetricasPanel';
 
 interface Props {
   section: AdminSection;
@@ -179,6 +180,7 @@ const SECTION_MAP: Record<AdminSection, React.ReactNode> = {
   boveda:      <BovedaSection/>,
   seguridad:   <SeguridadSection />,
   auditoria:   <AuditoriaSection />,
+  metricas:    <MetricasPanel />,
   facturacion: <FacturacionPanel />,
 };
 
