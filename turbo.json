@@ -21,7 +21,11 @@
     "MP_ACCESS_TOKEN",
     "MP_CURRENCY",
     "MP_BACK_URL",
-    "MP_SANDBOX"
+    "MP_SANDBOX",
+    "REPORTES_API_URL",
+    "REPORTES_INGEST_SECRET",
+    "REPORTES_COLA",
+    "SERVICIO_NOMBRE"
   ],
   "tasks": {
     "build": {

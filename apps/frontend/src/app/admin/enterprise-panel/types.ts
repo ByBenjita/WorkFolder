@@ -5,4 +5,5 @@ export type AdminSection =
   | 'boveda'
   | 'seguridad'
   | 'auditoria'
+  | 'metricas'
   | 'facturacion';

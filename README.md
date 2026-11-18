@@ -13,6 +13,7 @@ El proyecto es un **monorepo pnpm + Turborepo** compuesto por:
 | Documentos | `apps/documentos` | 3002 | Microservicio de gestión y cifrado de documentos |
 | Facturación | `apps/facturacion` | 3003 | Microservicio de pagos (Mercado Pago) |
 | Auditoría | `apps/auditoria` | 3004 | Consumidor de la cola `audit_events` (Supabase Queues) + API de logs |
+| Reportes | `apps/reportes` | 3005 | Eventos de negocio en Vercel Queues + API de métricas en tiempo real |
 | Utils | `packages/utils` | — | Librería compartida (cifrado AES-256-GCM) |
 
 ## Stack Tecnológico
@@ -21,6 +22,7 @@ El proyecto es un **monorepo pnpm + Turborepo** compuesto por:
 - **Base de datos y Storage:** Supabase (PostgreSQL + Buckets)
 - **Pagos:** Mercado Pago SDK
 - **Criptografía:** Node.js `crypto` nativo — AES-256-GCM
+- **Mensajería:** Supabase Queues (pgmq) para auditoría y pub/sub; Vercel Queues (equivalente gestionado a Kafka) para streaming de eventos de negocio y métricas
 - **Testing:** Vitest
 - **Monorepo:** pnpm Workspaces + Turborepo
 
@@ -59,6 +61,9 @@ MP_ACCESS_TOKEN
 MP_CURRENCY
 MP_BACK_URL
 MP_SANDBOX
+REPORTES_API_URL         # productores y frontend: URL del microservicio de reportes
+REPORTES_INGEST_SECRET   # productores y reportes: secreto de POST /api/eventos
+SERVICIO_NOMBRE          # productores en Vercel: usuarios | documentos | facturacion
 ```
 
 ## Levantar el Entorno Completo
@@ -76,6 +81,9 @@ Esto ejecuta `turbo dev` y levanta todas las apps simultáneamente:
 - Documentos API: http://localhost:3002
 - Facturación API: http://localhost:3003
 - Auditoría API: http://localhost:3004
+- Reportes API: http://localhost:3005 (dashboard en el panel enterprise → **Métricas Live**)
+
+Detalle del flujo de eventos (Vercel Queues) en [apps/reportes/README.md](apps/reportes/README.md).
 
 ## Levantar una App Individual
 
@@ -126,7 +134,7 @@ WorkFolder/
 │   ├── documentos/      # API documentos (puerto 3002)
 │   ├── facturacion/     # API pagos (puerto 3003)
 │   ├── auditoria/       # API auditoría + consumidor de cola (puerto 3004)
-│   └── reportes/        # (pendiente)
+│   └── reportes/        # Vercel Queues + métricas en tiempo real (puerto 3005)
 ├── packages/
 │   └── utils/           # Librería compartida (@workfolder/utils)
 ├── turbo.json
@@ -141,4 +149,5 @@ WorkFolder/
 - [Microservicio Documentos](apps/documentos/README.md)
 - [Microservicio Facturación](apps/facturacion/README.md)
 - [Microservicio Auditoría](apps/auditoria/README.md)
+- [Microservicio Reportes (Vercel Queues)](apps/reportes/README.md)
 - [Paquete Utils](packages/utils/README.md)

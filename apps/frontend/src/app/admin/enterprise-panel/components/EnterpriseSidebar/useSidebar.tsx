@@ -17,6 +17,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'boveda',      label: 'Bóveda Enterprise',   iconName: 'FolderLock' },
   { id: 'seguridad',   label: 'Seguridad Nivel 3',   iconName: 'Shield'     },
   { id: 'auditoria',   label: 'Auditoría Live',      iconName: 'Activity'   },
+  { id: 'metricas',    label: 'Métricas Live',       iconName: 'BarChart'   },
   { id: 'facturacion', label: 'Facturación',         iconName: 'Receipt'    },
 ];
 

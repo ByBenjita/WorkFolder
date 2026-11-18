@@ -5,6 +5,7 @@
 
 import { safeEqual } from './safeEqual';
 import type { RequestConHeaders } from './audit';
+import { TOPICOS_NEGOCIO, emitirEventoNegocio } from './eventos';
 
 export const TOPICS = {
   SUSCRIPCION_AUTORIZADA: 'suscripcion.autorizada',
@@ -61,6 +62,16 @@ export interface PubSubClient {
 export async function publicar(client: PubSubClient, topic: Topic, payload: object): Promise<void> {
   const { error } = await client.rpc('publicar_evento', { p_topic: topic, p_payload: payload });
   if (error) throw new Error(`No se pudo publicar ${topic}: ${error.message}`);
+
+  // Métricas en tiempo real: solo lo que quedó publicado en pgmq. Sin IP.
+  const { ip: _ip, ...datos } = payload as Record<string, unknown>;
+  await emitirEventoNegocio(TOPICOS_NEGOCIO.PAGOS, claveDeNegocio(datos), { tipo: topic, datos });
+}
+
+/** Id del hecho de negocio: con él apps/reportes descarta reenvíos (MP reintenta webhooks) */
+function claveDeNegocio(datos: Record<string, unknown>): string | null {
+  const id = datos.payment_id ?? datos.preapproval_id ?? datos.admin_id;
+  return id == null ? null : String(id);
 }
 
 /** Mensaje tal como lo devuelve pgmq_public.read */
